@@ -1,0 +1,107 @@
+// Camada de estado: cliente Supabase + acesso às tabelas vagas / fonte_saude / alertas.
+import { createClient } from "@supabase/supabase-js";
+
+let _client = null;
+
+export function getClient() {
+  if (_client) return _client;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "SUPABASE_URL e SUPABASE_SERVICE_KEY são obrigatórios (defina no .env ou no ambiente)."
+    );
+  }
+  _client = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return _client;
+}
+
+// Insere vagas novas ignorando conflito em (fonte, fonte_id). Retorna as linhas inseridas.
+export async function inserirVagas(vagas) {
+  if (!vagas.length) return [];
+  const { data, error } = await getClient()
+    .from("vagas")
+    .upsert(vagas, { onConflict: "fonte,fonte_id", ignoreDuplicates: true })
+    .select();
+  if (error) throw error;
+  return data || [];
+}
+
+// Hashes já vistos, para a camada 1 do dedupe.
+export async function hashesConhecidos(hashes) {
+  if (!hashes.length) return new Set();
+  const { data, error } = await getClient()
+    .from("vagas")
+    .select("hash")
+    .in("hash", hashes);
+  if (error) throw error;
+  return new Set((data || []).map((r) => r.hash));
+}
+
+// Vagas recentes (para dedupe por fingerprint/Jaccard dentro da janela).
+export async function vagasRecentes(dias = 30) {
+  const desde = new Date(Date.now() - dias * 864e5).toISOString();
+  const { data, error } = await getClient()
+    .from("vagas")
+    .select("id, titulo, empresa, descricao, fingerprint, score, cliente_meta")
+    .gte("criado_em", desde);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function registrarSaudeFonte(fonte, { ok, erro = null, itens = 0 }) {
+  const client = getClient();
+  const { data } = await client
+    .from("fonte_saude")
+    .select("erros_seguidos")
+    .eq("fonte", fonte)
+    .maybeSingle();
+  const errosSeguidos = ok ? 0 : (data?.erros_seguidos || 0) + 1;
+  const patch = {
+    fonte,
+    erros_seguidos: errosSeguidos,
+    itens_ultima_run: itens,
+  };
+  if (ok) patch.ultimo_ok = new Date().toISOString();
+  else patch.ultimo_erro = String(erro).slice(0, 500);
+  const { error } = await client.from("fonte_saude").upsert(patch, { onConflict: "fonte" });
+  if (error) throw error;
+}
+
+// Seleciona candidatas ao alerta: status 'novo' e score no corte.
+export async function candidatasAlerta(scoreMin, limite) {
+  const { data, error } = await getClient()
+    .from("vagas")
+    .select("*")
+    .eq("status", "novo")
+    .gte("score", scoreMin)
+    .order("score", { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function marcarStatus(ids, status) {
+  if (!ids.length) return;
+  const { error } = await getClient().from("vagas").update({ status }).in("id", ids);
+  if (error) throw error;
+}
+
+export async function registrarAlerta(vagaIds, canal = "telegram") {
+  const { error } = await getClient().from("alertas").insert({ vaga_ids: vagaIds, canal });
+  if (error) throw error;
+}
+
+// Estatísticas para o digest semanal.
+export async function estatisticasSemana(dias = 7) {
+  const desde = new Date(Date.now() - dias * 864e5).toISOString();
+  const { data: vagas, error } = await getClient()
+    .from("vagas")
+    .select("fonte, score, status, skills, criado_em")
+    .gte("criado_em", desde);
+  if (error) throw error;
+  const { data: saude } = await getClient().from("fonte_saude").select("*");
+  return { vagas: vagas || [], saude: saude || [] };
+}
