@@ -1,0 +1,17 @@
+{
+  "name": "radar-freelance",
+  "version": "0.1.0",
+  "description": "Radar de oportunidades freelance internacionais com scoring e alerta curado.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "ciclo": "node src/index.js --ciclo",
+    "digest": "node src/index.js --digest",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

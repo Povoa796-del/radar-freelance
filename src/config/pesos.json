@@ -1,0 +1,15 @@
+{
+  "fit_skill": 30,
+  "viabilidade_agentes": 20,
+  "ticket": 25,
+  "qualidade_cliente": 15,
+  "frescor": 10,
+  "penalidades": {
+    "budget_ausente": -8,
+    "equity_ou_revshare": -40,
+    "teste_nao_pago": -25,
+    "urgente_com_budget_baixo": -20,
+    "nda_antes_da_descricao": -15,
+    "exige_fulltime": -30
+  }
+}

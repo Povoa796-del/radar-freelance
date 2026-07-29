@@ -1,0 +1,24 @@
+{
+  "posicionamento": "Engenheiro de automação com IA e SEO programático — pipelines multi-agente, geração de conteúdo em escala, sites de alto volume",
+  "base": { "pais": "ES", "fuso": "Europe/Madrid", "overlap_max_horas": 4 },
+  "idiomas": ["pt", "es", "en"],
+  "stacks_core": [
+    "Node.js", "Next.js", "Cloudflare Workers/Pages", "Supabase/Postgres",
+    "Anthropic API", "DeepSeek", "pipelines multi-agente", "Puppeteer",
+    "SEO programático", "Remotion", "FFmpeg", "YouTube Data/Analytics API",
+    "GA4/GTM", "automação de conteúdo"
+  ],
+  "stacks_aceitaveis": ["Python", "Astro", "Vercel", "n8n", "Airtable", "Stripe"],
+  "anti_stacks": ["mobile nativo", "Java/.NET enterprise", "Salesforce", "Unity", "design gráfico puro"],
+  "cases": [
+    { "nome": "Comparar Cartões", "tipo": "SEO programático + pipeline de conteúdo", "stack": ["Next.js", "Cloudflare", "Supabase"], "resultado": "site comparador com 4 agentes de conteúdo automatizados e auditoria de dataset" },
+    { "nome": "Libremente", "tipo": "migração de infra + redesign", "stack": ["Cloudflare Workers", "Supabase"], "resultado": "saída de plataforma no-code para infra própria, com SEO e analytics completos" },
+    { "nome": "Xadrez do Capital", "tipo": "pipeline de vídeo end-to-end", "stack": ["Node.js", "DeepSeek", "HeyGen", "Remotion"], "resultado": "8 agentes, pesquisa a publicação, engine de vídeo reutilizável" },
+    { "nome": "Radar Ajedrez", "tipo": "descoberta automatizada de pautas", "stack": ["Node.js"], "resultado": "9 agentes, dedupe por Jaccard com clustering de entidades" },
+    { "nome": "carrossel-ig", "tipo": "CLI de geração de criativos", "stack": ["Node.js", "Puppeteer", "Anthropic API"], "resultado": "briefing JSON → carrossel renderizado" },
+    { "nome": "Analista de desempenho YouTube", "tipo": "analytics + visão computacional", "stack": ["YouTube APIs", "Claude vision"], "resultado": "correlação de CTR com features de título e thumbnail" }
+  ],
+  "pricing": { "hora_usd_min": 45, "fixo_usd_min": 800, "retainer_usd_mes_min": 1500 },
+  "disponibilidade_h_semana": 20,
+  "faturacao": { "regime": "autónomo ES", "moedas": ["EUR", "USD"], "nota": "cliente fora da UE = exportação de serviço; cliente B2B na UE exige ROI/VIES — confirmar com asesor antes de faturar o primeiro" }
+}

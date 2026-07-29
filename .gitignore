@@ -1,0 +1,6 @@
+.env
+*.env.rtf
+Contexto e segredos*
+node_modules/
+reports/*.md
+.DS_Store

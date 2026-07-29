@@ -1,0 +1,23 @@
+{
+  "gate": {
+    "moedas_aceitas": ["USD", "EUR", "GBP", "CHF"],
+    "max_dias_publicado": 7
+  },
+  "alerta": {
+    "score_minimo": 70,
+    "max_oportunidades": 5
+  },
+  "keywords": [
+    "automation", "ai", "llm", "gpt", "agent", "pipeline", "content",
+    "seo", "scraping", "node", "next.js", "nextjs", "cloudflare",
+    "supabase", "data pipeline", "web scraping", "integration"
+  ],
+  "fontes": {
+    "himalayas": { "enabled": true, "rateLimitMs": 1500, "max_paginas": 3 },
+    "remoteok": { "enabled": true, "rateLimitMs": 2000 },
+    "remotive": { "enabled": true, "rateLimitMs": 1000, "categorias": ["software-dev", "data", "marketing"], "limit": 50 },
+    "jobicy": { "enabled": true, "rateLimitMs": 1000, "count": 50, "industries": ["dev", "data-science", "marketing"] },
+    "arbeitnow": { "enabled": true, "rateLimitMs": 1000 },
+    "hn-whoishiring": { "enabled": true, "rateLimitMs": 500 }
+  }
+}
