@@ -18,34 +18,38 @@ export function getClient() {
   return _client;
 }
 
+// Colunas persistidas (evita mandar campos internos como score_base).
+const COLUNAS = [
+  "fonte", "fonte_id", "url", "titulo", "empresa", "descricao", "skills",
+  "tipo", "budget_min", "budget_max", "moeda", "budget_usd", "publicado_em",
+  "remoto", "fuso_exigido", "cliente_meta", "hash", "fingerprint",
+  "score", "score_detalhe", "llm_analise", "status",
+];
+
+function paraRegistro(vaga) {
+  const r = {};
+  for (const c of COLUNAS) if (vaga[c] !== undefined) r[c] = vaga[c];
+  return r;
+}
+
 // Insere vagas novas ignorando conflito em (fonte, fonte_id). Retorna as linhas inseridas.
 export async function inserirVagas(vagas) {
   if (!vagas.length) return [];
   const { data, error } = await getClient()
     .from("vagas")
-    .upsert(vagas, { onConflict: "fonte,fonte_id", ignoreDuplicates: true })
+    .upsert(vagas.map(paraRegistro), { onConflict: "fonte,fonte_id", ignoreDuplicates: true })
     .select();
   if (error) throw error;
   return data || [];
 }
 
-// Hashes já vistos, para a camada 1 do dedupe.
-export async function hashesConhecidos(hashes) {
-  if (!hashes.length) return new Set();
-  const { data, error } = await getClient()
-    .from("vagas")
-    .select("hash")
-    .in("hash", hashes);
-  if (error) throw error;
-  return new Set((data || []).map((r) => r.hash));
-}
-
-// Vagas recentes (para dedupe por fingerprint/Jaccard dentro da janela).
+// Vagas recentes (para dedupe por hash/fingerprint/Jaccard dentro da janela).
+// Busca por janela de tempo, não pela lista de entrada — evita URL gigante no PostgREST.
 export async function vagasRecentes(dias = 30) {
   const desde = new Date(Date.now() - dias * 864e5).toISOString();
   const { data, error } = await getClient()
     .from("vagas")
-    .select("id, titulo, empresa, descricao, fingerprint, score, cliente_meta")
+    .select("id, titulo, empresa, descricao, hash, fingerprint, score, cliente_meta")
     .gte("criado_em", desde);
   if (error) throw error;
   return data || [];
