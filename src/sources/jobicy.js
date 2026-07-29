@@ -29,7 +29,7 @@ function normalize(raw) {
     empresa: raw.companyName,
     descricao: stripHtml(raw.jobDescription || raw.jobExcerpt),
     skills: industria,
-    tipo: inferirTipo(Array.isArray(raw.jobType) ? raw.jobType.join(" ") : raw.jobType, raw.salaryPeriod),
+    tipo: inferirTipo(Array.isArray(raw.jobType) ? raw.jobType.join(" ") : raw.jobType, raw.salaryPeriod, raw.jobTitle),
     budget_min: raw.salaryMin || null,
     budget_max: raw.salaryMax || null,
     moeda: raw.salaryCurrency || null,

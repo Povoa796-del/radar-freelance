@@ -19,7 +19,7 @@ function normalize(raw) {
     empresa: raw.company_name,
     descricao: stripHtml(raw.description),
     skills: raw.tags || [],
-    tipo: inferirTipo(tipos.join(" ")),
+    tipo: inferirTipo(tipos.join(" "), null, raw.title),
     budget_min: null,
     budget_max: null,
     moeda: null,

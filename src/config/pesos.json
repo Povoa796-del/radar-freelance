@@ -1,10 +1,10 @@
 {
-  "fit_skill": 40,
+  "fit_skill": 35,
   "viabilidade_agentes": 25,
-  "ticket": 12,
-  "qualidade_cliente": 8,
-  "frescor": 15,
-  "fit_minimo": 0.2,
+  "ticket": 15,
+  "qualidade_cliente": 15,
+  "frescor": 10,
+  "ticket_emprego_eur": { "min": 55000, "max": 110000 },
   "penalidades": {
     "budget_ausente": -4,
     "equity_ou_revshare": -40,

@@ -77,12 +77,11 @@ function finalizar(vaga, viabilidadeNorm, penalidades, pesos, llm_analise) {
 }
 
 export async function qualificar(vagas, perfil, pesos, { scoreMinimo = 70, maxAnalises = 40 } = {}) {
-  // Só vale a pena analisar quem: (a) pode alcançar o corte mesmo com viabilidade máxima
-  // e (b) tem fit mínimo — nunca gasta LLM em vaga fora do nicho.
+  // Só vale a pena analisar quem pode alcançar o corte mesmo com viabilidade máxima.
+  // O fit mínimo já foi garantido no gate (04).
   const piso = scoreMinimo - pesos.viabilidade_agentes;
-  const fitMin = pesos.fit_minimo ?? 0.2;
   const candidatas = vagas
-    .filter((v) => v.score_base >= piso && (v.score_detalhe?.fit_skill ?? 0) >= fitMin)
+    .filter((v) => v.score_base >= piso)
     .sort((a, b) => b.score_base - a.score_base)
     .slice(0, maxAnalises);
   const idsAnalisar = new Set(candidatas.map((v) => v.hash));

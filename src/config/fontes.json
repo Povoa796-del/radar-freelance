@@ -1,12 +1,16 @@
 {
   "gate": {
     "moedas_aceitas": ["USD", "EUR", "GBP", "CHF"],
-    "max_dias_publicado": 7
+    "max_dias_publicado": 7,
+    "fit_minimo": 0.45
   },
   "alerta": {
     "score_minimo": 70,
-    "max_oportunidades": 5,
-    "max_analises": 40
+    "max_analises": 40,
+    "trilhas": {
+      "freelance": { "max": 3 },
+      "emprego": { "max": 2 }
+    }
   },
   "keywords": [
     "automation", "ai", "llm", "gpt", "agent", "pipeline", "content",

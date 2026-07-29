@@ -28,7 +28,7 @@ function normalize(raw) {
     empresa: raw.company_name,
     descricao: stripHtml(raw.description),
     skills: raw.tags || [],
-    tipo: inferirTipo(raw.job_type),
+    tipo: inferirTipo(raw.job_type, null, raw.title),
     budget_min: sal.min,
     budget_max: sal.max,
     moeda: sal.moeda,

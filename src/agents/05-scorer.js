@@ -1,44 +1,30 @@
-// 05 — scoring determinístico (grátis). Calcula tudo menos viabilidade_agentes,
-// que vem da camada LLM (06). Função pura.
-import { normalizarTexto } from "../lib/jaccard.js";
+// 05 — scoring determinístico (grátis). Calcula tudo menos viabilidade_agentes (LLM, 06).
+// Duas trilhas com normalização de ticket própria: 'freelance' e 'emprego'. Função pura.
+import { fitSkill } from "../lib/fit.js";
+import { paraUSD } from "../lib/moeda.js";
 
-// Casa `termo` como sequência de palavras no haystack normalizado (fronteira de palavra).
-function casaTermo(hay, termo) {
-  const t = normalizarTexto(termo);
-  if (!t) return false;
-  return new RegExp(`(^|\\s)${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`).test(hay);
+export function trilhaDe(vaga) {
+  return vaga.tipo === "emprego" ? "emprego" : "freelance";
 }
 
-// Fit = interseção ponderada de palavras do perfil com o texto da vaga, normalizada 0–1.
-// Usa fit_keywords (vocabulário em inglês, como as vagas são escritas); se ausente,
-// cai para os stacks. Título pesa mais que a descrição.
-function fitSkill(vaga, perfil) {
-  const hayTitulo = normalizarTexto(`${vaga.skills.join(" ")} ${vaga.titulo}`);
-  const hayDesc = normalizarTexto((vaga.descricao || "").slice(0, 1200));
-
-  const kws = perfil.fit_keywords;
-  let pontos = 0;
-  if (kws && Object.keys(kws).length) {
-    for (const [kw, peso] of Object.entries(kws)) {
-      if (casaTermo(hayTitulo, kw)) pontos += peso; // título: peso cheio
-      else if (casaTermo(hayDesc, kw)) pontos += peso * 0.5; // descrição: metade
-    }
-  } else {
-    const hay = `${hayTitulo} ${hayDesc}`;
-    for (const s of perfil.stacks_core || []) if (casaTermo(hay, s)) pontos += 1.0;
-    for (const s of perfil.stacks_aceitaveis || []) if (casaTermo(hay, s)) pontos += 0.5;
-  }
-  return Math.min(1, pontos / 3); // ~3 acertos fortes saturam
-}
-
-// Escala log entre o mínimo e 5x o mínimo.
-function ticket(vaga, perfil) {
-  if (vaga.budget_usd == null) return null; // tratado como penalidade
+// Ticket da trilha freelance: escala log entre o mínimo e 5x o mínimo (seção 10 do brief).
+function ticketFreelance(vaga, perfil) {
+  if (vaga.budget_usd == null) return null; // vira penalidade budget_ausente
   const min = vaga.tipo === "freelance_hora" ? perfil.pricing.hora_usd_min : perfil.pricing.fixo_usd_min;
   if (!min) return 0.5;
   const lo = Math.log(min);
   const hi = Math.log(5 * min);
   const v = (Math.log(Math.max(vaga.budget_usd, min)) - lo) / (hi - lo);
+  return Math.max(0, Math.min(1, v));
+}
+
+// Ticket da trilha emprego: salário anual linear (EUR 55k => 0, EUR 110k => 1.0), saturando.
+function ticketEmprego(vaga, pesos) {
+  if (vaga.budget_usd == null) return 0; // sem penalidade na trilha emprego
+  const eur = pesos.ticket_emprego_eur || { min: 55000, max: 110000 };
+  const min = paraUSD(eur.min, "EUR");
+  const max = paraUSD(eur.max, "EUR");
+  const v = (vaga.budget_usd - min) / (max - min);
   return Math.max(0, Math.min(1, v));
 }
 
@@ -58,10 +44,10 @@ function qualidadeCliente(vaga) {
   return 0.5; // neutro — nunca penaliza por falta de dado
 }
 
-// Retorna a vaga anotada com score_base (sem viabilidade) e score_detalhe.
 export function pontuar(vaga, perfil, pesos) {
+  const trilha = trilhaDe(vaga);
   const fit = fitSkill(vaga, perfil);
-  const tk = ticket(vaga, perfil);
+  const tk = trilha === "emprego" ? ticketEmprego(vaga, pesos) : ticketFreelance(vaga, perfil);
   const fr = frescor(vaga);
   const qc = qualidadeCliente(vaga);
 
@@ -71,8 +57,9 @@ export function pontuar(vaga, perfil, pesos) {
     fr * pesos.frescor +
     qc * pesos.qualidade_cliente;
 
+  // budget_ausente só penaliza a trilha freelance.
   const penalidades = {};
-  if (vaga.budget_usd == null) {
+  if (trilha === "freelance" && vaga.budget_usd == null) {
     penalidades.budget_ausente = pesos.penalidades.budget_ausente;
     base += pesos.penalidades.budget_ausente;
   }
@@ -81,6 +68,7 @@ export function pontuar(vaga, perfil, pesos) {
     ...vaga,
     score_base: Math.round(base),
     score_detalhe: {
+      trilha,
       fit_skill: Number(fit.toFixed(2)),
       ticket: tk == null ? null : Number(tk.toFixed(2)),
       frescor: Number(fr.toFixed(2)),

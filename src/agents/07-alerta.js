@@ -1,8 +1,13 @@
 // 07 — alerta curado. Seleciona status 'novo' e score >= corte, ordena, corta em N.
 // Se nada passa, NÃO manda nada (radar que manda mensagem vazia vira ruído).
-import { candidatasAlerta, marcarStatus, registrarAlerta } from "../lib/supabase.js";
+import { candidatasAlertaTrilha, marcarStatus, registrarAlerta } from "../lib/supabase.js";
 import { enviarMensagem, esc, telegramConfigurado } from "../lib/telegram.js";
 import { log, warn } from "../lib/log.js";
+
+const TIPOS_TRILHA = {
+  freelance: ["freelance_fixo", "freelance_hora"],
+  emprego: ["emprego"],
+};
 
 const TIPO_LABEL = { freelance_fixo: "fixo", freelance_hora: "hora", emprego: "emprego" };
 
@@ -51,12 +56,21 @@ function botoes(id) {
   ];
 }
 
-export async function alertar({ scoreMinimo = 70, maxOportunidades = 5 } = {}) {
-  const candidatas = await candidatasAlerta(scoreMinimo, maxOportunidades);
+export async function alertar({ scoreMinimo = 70, trilhas = { freelance: { max: 3 }, emprego: { max: 2 } } } = {}) {
+  // Cada trilha é rankeada e cortada independentemente — não competem no mesmo ranking.
+  const porTrilha = {};
+  for (const [nome, cfg] of Object.entries(trilhas)) {
+    const scoreMin = cfg.score_minimo ?? scoreMinimo;
+    porTrilha[nome] = await candidatasAlertaTrilha(scoreMin, TIPOS_TRILHA[nome], cfg.max);
+  }
+  const candidatas = Object.values(porTrilha).flat();
+
+  const resumoTrilhas = Object.entries(porTrilha).map(([n, v]) => `${n}:${v.length}`).join(" ");
   if (!candidatas.length) {
-    log(`alerta: nada com score >= ${scoreMinimo}, não envio mensagem`);
+    log(`alerta: nada com score >= ${scoreMinimo} em nenhuma trilha (${resumoTrilhas}), não envio mensagem`);
     return { enviadas: 0 };
   }
+  log(`alerta: candidatas por trilha → ${resumoTrilhas}`);
 
   if (!telegramConfigurado()) {
     warn(`alerta: Telegram não configurado; ${candidatas.length} oportunidades ficariam de fora`);

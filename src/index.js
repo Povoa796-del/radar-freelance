@@ -51,7 +51,7 @@ async function ciclo() {
 
   const res = await alertar({
     scoreMinimo: fontes.alerta.score_minimo,
-    maxOportunidades: fontes.alerta.max_oportunidades,
+    trilhas: fontes.alerta.trilhas,
   });
 
   log(`ciclo concluído em ${((Date.now() - t0) / 1000).toFixed(1)}s · alertadas: ${res.enviadas}`);

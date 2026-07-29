@@ -6,7 +6,7 @@ import { paraUSD, detectarMoeda, moedaSuportada } from "../src/lib/moeda.js";
 import { similaridade, shingles, normalizarTexto } from "../src/lib/jaccard.js";
 import { montarVaga, urlCanonica, parseSalario } from "../src/lib/vaga.js";
 import { avaliarGate } from "../src/agents/04-gate.js";
-import { pontuar } from "../src/agents/05-scorer.js";
+import { pontuar, trilhaDe } from "../src/agents/05-scorer.js";
 
 const perfil = {
   pricing: { hora_usd_min: 45, fixo_usd_min: 800 },
@@ -14,10 +14,11 @@ const perfil = {
   fit_keywords: { automation: 1.0, llm: 1.0, node: 1.0, "next.js": 1.0 },
 };
 const pesos = {
-  fit_skill: 40, viabilidade_agentes: 25, ticket: 12, qualidade_cliente: 8,
-  frescor: 15, penalidades: { budget_ausente: -4 },
+  fit_skill: 35, viabilidade_agentes: 25, ticket: 15, qualidade_cliente: 15,
+  frescor: 10, ticket_emprego_eur: { min: 55000, max: 110000 },
+  penalidades: { budget_ausente: -4 },
 };
-const gateCfg = { moedas_aceitas: ["USD", "EUR", "GBP", "CHF"], max_dias_publicado: 7 };
+const gateCfg = { moedas_aceitas: ["USD", "EUR", "GBP", "CHF"], max_dias_publicado: 7, fit_minimo: 0.45 };
 
 test("moeda: conversão e detecção", () => {
   assert.equal(paraUSD(100, "USD"), 100);
@@ -78,8 +79,32 @@ test("scorer: vaga no nicho pontua bem; fit alto", () => {
   assert.ok(p.score_base > 40, `score_base baixo: ${p.score_base}`);
 });
 
-test("scorer: budget ausente aplica penalidade", () => {
-  const p = pontuar(vagaBase({ budget_min: null, budget_max: null, moeda: null }), perfil, pesos);
-  assert.equal(p.score_detalhe.penalidades.budget_ausente, -4);
-  assert.equal(p.score_detalhe.ticket, null);
+test("scorer: budget ausente penaliza freelance, mas NÃO emprego", () => {
+  const semBudget = { budget_min: null, budget_max: null, moeda: null };
+  const free = pontuar(vagaBase({ ...semBudget, tipo: "freelance_fixo" }), perfil, pesos);
+  assert.equal(free.score_detalhe.penalidades.budget_ausente, -4);
+  const emp = pontuar(vagaBase({ ...semBudget, tipo: "emprego" }), perfil, pesos);
+  assert.equal(emp.score_detalhe.penalidades.budget_ausente, undefined);
+});
+
+test("scorer: grava a trilha e usa ticket próprio", () => {
+  const free = pontuar(vagaBase({ tipo: "freelance_fixo" }), perfil, pesos);
+  assert.equal(free.score_detalhe.trilha, "freelance");
+  assert.equal(trilhaDe({ tipo: "emprego" }), "emprego");
+  // emprego: salário anual ~USD 118.8k (EUR 110k) satura ticket em 1.0
+  const emp = pontuar(vagaBase({ tipo: "emprego", budget_min: 130000, budget_max: 130000, moeda: "USD" }), perfil, pesos);
+  assert.equal(emp.score_detalhe.trilha, "emprego");
+  assert.equal(emp.score_detalhe.ticket, 1);
+});
+
+test("gate: fit abaixo do mínimo é descartado independente de salário", () => {
+  const foraDoNicho = montarVaga({
+    fonte: "t", fonte_id: "9", url: "https://ex.com/9",
+    titulo: "Senior Salesforce Administrator", descricao: "Manage Salesforce org, reports and dashboards.",
+    skills: [], tipo: "emprego", budget_min: 200000, budget_max: 200000, moeda: "USD",
+    publicado_em: new Date().toISOString(), remoto: true,
+  });
+  const r = avaliarGate(foraDoNicho, perfil, gateCfg);
+  assert.equal(r.ok, false);
+  assert.match(r.motivo, /fit/);
 });

@@ -32,7 +32,7 @@ function normalize(raw) {
     empresa: raw.companyName,
     descricao: stripHtml(raw.description || raw.excerpt),
     skills: cats,
-    tipo: inferirTipo(raw.employmentType, raw.salaryPeriod),
+    tipo: inferirTipo(raw.employmentType, raw.salaryPeriod, raw.title),
     budget_min: raw.minSalary ?? null,
     budget_max: raw.maxSalary ?? null,
     moeda: raw.currency || "USD",

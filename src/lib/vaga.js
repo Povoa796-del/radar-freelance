@@ -63,12 +63,14 @@ export function urlCanonica(url) {
 }
 
 // Normaliza tipo de contrato -> 'freelance_fixo' | 'freelance_hora' | 'emprego'.
-export function inferirTipo(rawTipo, salaryPeriod) {
-  const t = String(rawTipo || "").toLowerCase();
+// `texto` (título/descrição) ajuda quando os metadados não marcam o regime — ex:
+// título "LLM Engineer Freelancer" numa fonte que não traz job_type.
+export function inferirTipo(rawTipo, salaryPeriod, texto = "") {
+  const t = `${rawTipo || ""} ${texto || ""}`.toLowerCase();
   const p = String(salaryPeriod || "").toLowerCase();
-  const ehGig = /contract|freelance|temporary|contrato|hourly|per.?hour/.test(t);
+  const ehGig = /\b(contract|contractor|freelance|freelancer|temporary|contrato|autonom|hourly|per.?hour|\bgig)\b/.test(t);
   if (ehGig) {
-    return /hour|hora/.test(p) || /hourly|per.?hour/.test(t) ? "freelance_hora" : "freelance_fixo";
+    return /hour|hora/.test(p) || /hourly|per.?hour|contractor/.test(t) ? "freelance_hora" : "freelance_fixo";
   }
   return "emprego";
 }

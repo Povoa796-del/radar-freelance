@@ -74,13 +74,14 @@ export async function registrarSaudeFonte(fonte, { ok, erro = null, itens = 0 })
   if (error) throw error;
 }
 
-// Seleciona candidatas ao alerta: status 'novo' e score no corte.
-export async function candidatasAlerta(scoreMin, limite) {
+// Candidatas ao alerta de uma trilha: status 'novo', score no corte e tipo na lista.
+export async function candidatasAlertaTrilha(scoreMin, tipos, limite) {
   const { data, error } = await getClient()
     .from("vagas")
     .select("*")
     .eq("status", "novo")
     .gte("score", scoreMin)
+    .in("tipo", tipos)
     .order("score", { ascending: false })
     .limit(limite);
   if (error) throw error;

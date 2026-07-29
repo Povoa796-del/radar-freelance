@@ -1,6 +1,7 @@
 // 04 — gate. Filtros duros, antes de gastar token de LLM. Função pura.
 // Budget ausente NÃO é rejeição (só penalidade no score) — metade das vagas não publica faixa.
 import { log } from "../lib/log.js";
+import { fitSkill } from "../lib/fit.js";
 
 const RE_PRESENCIAL = /\b(on-?site|in-?office|hybrid|relocat|must be (?:located|based)|presencial|no remote)\b/i;
 const RE_OVERLAP_DURO = /(overlap|work).{0,30}(full[- ]?day|8\s*hours|6\s*hours|7\s*hours)|must overlap.{0,30}(pst|pacific|est|eastern)/i;
@@ -19,6 +20,13 @@ export function avaliarGate(vaga, perfil, gateCfg) {
   const pricing = perfil.pricing || {};
   const moedas = gateCfg.moedas_aceitas || ["USD", "EUR", "GBP", "CHF"];
   const maxDias = gateCfg.max_dias_publicado ?? 7;
+  const fitMin = gateCfg.fit_minimo ?? 0.45;
+
+  // Fit mínimo obrigatório: descarta fora do nicho, independente de ticket/salário.
+  const fit = fitSkill(vaga, perfil);
+  if (fit < fitMin) {
+    return { ok: false, motivo: `fit ${fit.toFixed(2)} < mínimo ${fitMin}` };
+  }
 
   // Ticket mínimo (só quando há budget)
   if (vaga.budget_usd != null) {

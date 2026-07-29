@@ -13,7 +13,6 @@ async function fetch() {
 
 function normalize(raw) {
   const tags = raw.tags || [];
-  const ehGig = tags.some((t) => /contract|freelance/i.test(t));
   return montarVaga({
     fonte: "remoteok",
     fonte_id: raw.id,
@@ -22,7 +21,7 @@ function normalize(raw) {
     empresa: raw.company,
     descricao: stripHtml(raw.description),
     skills: tags,
-    tipo: ehGig ? inferirTipo("contract") : "emprego",
+    tipo: inferirTipo(tags.join(" "), null, raw.position),
     budget_min: raw.salary_min || null,
     budget_max: raw.salary_max || null,
     moeda: "USD",
