@@ -5,7 +5,8 @@
   },
   "alerta": {
     "score_minimo": 70,
-    "max_oportunidades": 5
+    "max_oportunidades": 5,
+    "max_analises": 40
   },
   "keywords": [
     "automation", "ai", "llm", "gpt", "agent", "pipeline", "content",
