@@ -1,11 +1,12 @@
 {
-  "fit_skill": 30,
-  "viabilidade_agentes": 20,
-  "ticket": 25,
-  "qualidade_cliente": 15,
-  "frescor": 10,
+  "fit_skill": 40,
+  "viabilidade_agentes": 25,
+  "ticket": 12,
+  "qualidade_cliente": 8,
+  "frescor": 15,
+  "fit_minimo": 0.2,
   "penalidades": {
-    "budget_ausente": -8,
+    "budget_ausente": -4,
     "equity_ou_revshare": -40,
     "teste_nao_pago": -25,
     "urgente_com_budget_baixo": -20,
