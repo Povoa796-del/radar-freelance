@@ -1,0 +1,32 @@
+{
+  "author": "Overwatch360",
+  "children": [
+    {
+      "author": "sharkotter",
+      "children": [],
+      "created_at": "2026-07-03T20:18:14.000Z",
+      "created_at_i": 1783109894,
+      "id": 48779475,
+      "options": [],
+      "parent_id": 48747987,
+      "points": null,
+      "story_id": 48747976,
+      "text": "FYI.<p>The profile image on this LinkedIn page appears to be AI generated. There&#x27;s a high chance this is a scam.",
+      "title": null,
+      "type": "comment",
+      "url": null
+    }
+  ],
+  "created_at": "2026-07-01T15:01:52.000Z",
+  "created_at_i": 1782918112,
+  "id": 48747987,
+  "options": [],
+  "parent_id": 48747976,
+  "points": null,
+  "story_id": 48747976,
+  "text": "CaseLight is looking for a U.S.-based developer for a 20–25% equity partnership.<p>Investigators across legal, corporate, insurance, and private sectors are stuck with enterprise case management platforms charging $100+ per seat with 20-seat minimums and lengthy contracts just for their basic package.<p>Meanwhile, 50,000 small investigative agencies, 100,000 corporate&#x2F;insurance investigators, and 400,000 small-firm attorneys are forced into a patchwork of Word, Excel, Canva, Hunchly, and half a dozen disconnected apps just to get basic casework done. It destroys workflow and breaks evidence integrity.<p>CaseLight solves this by building a secure case management and evidence retention system where cases live on the investigator’s hardware, data never leaves their control, metadata stays intact, nothing gets overwritten, and there’s no cloud or subscription trap.<p>Pricing is $50&#x2F;month to intentionally disrupt a market way overdue for it, and we already have investigators ready to adopt once the system is fully hardened.<p>This isn’t SaaS or hype; it’s durable infrastructure built for people who actually handle evidence. I’ve already done the major lift — prototype, architecture, workflows, UX, and core logic. What’s left is tuning, hardening, and security work. I need a developer who understands durable systems, crash recovery, data integrity, metadata preservation, and security as a baseline. If you’ve built systems where failure is unacceptable and data protection is non-negotiable, we should talk.<p>Company: <a href=\"https:&#x2F;&#x2F;getcaselight.com\" rel=\"nofollow\">https:&#x2F;&#x2F;getcaselight.com</a><p>Founder: <a href=\"https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;charles-eklof&#x2F;\" rel=\"nofollow\">https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;charles-eklof&#x2F;</a><p>Reply here: charles@getcaselight.com",
+  "title": null,
+  "type": "comment",
+  "url": null,
+  "_threadId": "48747976"
+}
