@@ -2,6 +2,7 @@
 // Se nada passa, NÃO manda nada (radar que manda mensagem vazia vira ruído).
 import { candidatasAlertaTrilha, candidataSonda, atualizarScore, registrarAlerta } from "../lib/supabase.js";
 import { enviarMensagem, esc, telegramConfigurado } from "../lib/telegram.js";
+import { ehLead, escreverPitch } from "../lead.js";
 import { log, warn } from "../lib/log.js";
 
 const SONDA_MIN = 50; // banda de exploração: [SONDA_MIN, scoreMinimo)
@@ -53,6 +54,8 @@ export function formatarVaga(v) {
   if (a.risco_principal) linhas.push(`<b>Risco:</b> ${esc(a.risco_principal)}`);
   // Budget ausente não penaliza o score (v2) — é exibido para você decidir.
   if (v.budget_usd == null) linhas.push("⚠️ budget não publicado — negociar escopo antes");
+  // Vaga emprego que você resolve como serviço = lead de vendor.
+  if (ehLead(v)) linhas.push("💡 lead: empresa com orçamento para este problema");
   linhas.push("", `🔗 ${esc(v.url)}`);
   return linhas.join("\n");
 }
@@ -66,7 +69,7 @@ function botoes(id) {
   ];
 }
 
-export async function alertar({ scoreMinimo = 70, trilhas = { freelance: { max: 3 }, emprego: { max: 2 } } } = {}) {
+export async function alertar({ scoreMinimo = 70, trilhas = { freelance: { max: 3 }, emprego: { max: 2 } }, perfil = {} } = {}) {
   // Banda 'alerta': cada trilha rankeada e cortada independentemente (score >= corte).
   const porTrilha = {};
   for (const [nome, cfg] of Object.entries(trilhas)) {
@@ -82,6 +85,18 @@ export async function alertar({ scoreMinimo = 70, trilhas = { freelance: { max: 
 
   // Itens reais primeiro; a sonda por último, para não competir pela atenção.
   const selecionadas = [...alertaItens, ...(sonda ? [sonda] : [])];
+
+  // Leads (emprego que você resolve como serviço): gera o rascunho de pitch de vendor.
+  for (const v of selecionadas) {
+    if (ehLead(v)) {
+      try {
+        const caminho = escreverPitch(v, perfil);
+        log(`lead: pitch gravado em ${caminho}`);
+      } catch (err) {
+        warn(`lead: falha ao gerar pitch de "${v.titulo?.slice(0, 40)}": ${err.message}`);
+      }
+    }
+  }
   const resumo = `${Object.entries(porTrilha).map(([n, v]) => `${n}:${v.length}`).join(" ")} sonda:${sonda ? 1 : 0}`;
 
   if (!selecionadas.length) {

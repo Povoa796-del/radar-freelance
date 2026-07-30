@@ -3,4 +3,5 @@
 Contexto e segredos*
 node_modules/
 reports/*.md
+propostas/*.md
 .DS_Store

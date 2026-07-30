@@ -10,6 +10,7 @@ import { componentesDeterministicos, montarScore, trilhaDe } from "../src/agents
 import { formatarVaga } from "../src/agents/07-alerta.js";
 import { decidirCliques } from "../src/callbacks.js";
 import { avaliarGeo } from "../src/lib/geo.js";
+import { ehLead, temaDeServico, gerarPitch } from "../src/lead.js";
 
 const geoAtivo = {
   aceita_presencial: true,
@@ -242,6 +243,34 @@ test("alerta: linha 📍 só aparece para presencial/híbrido com zona", () => {
   assert.match(pres, /📍 Braga · z1 híbrido/);
   const remota = formatarVaga({ ...base, score_detalhe: { zona: null, modalidade: "remoto" } });
   assert.doesNotMatch(remota, /📍/);
+});
+
+const leadVaga = {
+  titulo: "Content Automation Manager",
+  descricao: "Build a content pipeline at scale using automation and LLMs.",
+  score: 78, fonte: "adzuna", empresa: "Acme", url: "https://x/y", skills: ["automation", "llm"],
+  score_detalhe: { trilha: "emprego" },
+  llm_analise: { viabilidade_agentes: "alta", necessidade_real: "Escalar produção de conteúdo", esforco_horas_estimado: 80, risco_principal: "escopo vago" },
+};
+
+test("lead: emprego + viabilidade alta + tema de serviço → é lead", () => {
+  assert.equal(ehLead(leadVaga), true);
+  assert.ok(temaDeServico(leadVaga.descricao));
+});
+
+test("lead: freelance, viabilidade baixa ou fora de tema → NÃO é lead", () => {
+  assert.equal(ehLead({ ...leadVaga, score_detalhe: { trilha: "freelance" } }), false);
+  assert.equal(ehLead({ ...leadVaga, llm_analise: { viabilidade_agentes: "baixa" } }), false);
+  assert.equal(ehLead({ ...leadVaga, titulo: "Accountant", descricao: "bookkeeping and taxes" }), false);
+});
+
+test("lead: pitch tem necessidade, casos e engajamento", () => {
+  const perfil = { posicionamento: "Eng de automação com IA", pricing: { fixo_usd_min: 800, retainer_usd_mes_min: 1500 }, cases: [{ nome: "Xadrez", tipo: "pipeline de vídeo", stack: ["Node.js", "DeepSeek"], resultado: "8 agentes" }] };
+  const md = gerarPitch(leadVaga, perfil);
+  assert.match(md, /Lead — Content Automation Manager/);
+  assert.match(md, /Escalar produção de conteúdo/);
+  assert.match(md, /Engajamento sugerido/);
+  assert.match(md, /US\$ 800/);
 });
 
 test("gate: fit abaixo do mínimo é descartado independente de salário", () => {
