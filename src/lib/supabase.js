@@ -88,6 +88,20 @@ export async function candidatasAlertaTrilha(scoreMin, tipos, limite) {
   return data || [];
 }
 
+// Todas as vagas (para re-pontuação v2). Traz o que o scorer precisa recomputar.
+export async function todasVagas() {
+  const { data, error } = await getClient()
+    .from("vagas")
+    .select("id, titulo, descricao, skills, tipo, budget_usd, publicado_em, cliente_meta, status, score_detalhe, llm_analise");
+  if (error) throw error;
+  return data || [];
+}
+
+export async function atualizarScore(id, patch) {
+  const { error } = await getClient().from("vagas").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
 export async function marcarStatus(ids, status) {
   if (!ids.length) return;
   const { error } = await getClient().from("vagas").update({ status }).in("id", ids);

@@ -30,10 +30,13 @@ export async function gerarDigest() {
   const porFonte = {};
   for (const v of vagas) porFonte[v.fonte] = (porFonte[v.fonte] || 0) + 1;
 
-  const altas = vagas.filter((v) => (v.score || 0) >= 70);
-  const alertadas = vagas.filter((v) => v.status !== "novo");
+  const pontuadas = vagas.filter((v) => v.score != null);
+  const altas = pontuadas.filter((v) => v.score >= 70);
+  const alertadas = vagas.filter((v) => !["novo", "descartado"].includes(v.status));
   const interesse = vagas.filter((v) => ["interesse", "aplicado", "resposta", "ganho"].includes(v.status));
-  const scoreMedio = total ? (vagas.reduce((a, v) => a + (v.score || 0), 0) / total).toFixed(1) : "0";
+  const scoreMedio = pontuadas.length
+    ? (pontuadas.reduce((a, v) => a + v.score, 0) / pontuadas.length).toFixed(1)
+    : "0";
   const topSkills = contarSkills(altas).slice(0, 3);
   const taxaInteresse = alertadas.length ? ((interesse.length / alertadas.length) * 100).toFixed(0) : "0";
 

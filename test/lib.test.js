@@ -6,7 +6,7 @@ import { paraUSD, detectarMoeda, moedaSuportada } from "../src/lib/moeda.js";
 import { similaridade, shingles, normalizarTexto } from "../src/lib/jaccard.js";
 import { montarVaga, urlCanonica, parseSalario } from "../src/lib/vaga.js";
 import { avaliarGate } from "../src/agents/04-gate.js";
-import { pontuar, trilhaDe } from "../src/agents/05-scorer.js";
+import { componentesDeterministicos, montarScore, trilhaDe } from "../src/agents/05-scorer.js";
 
 const perfil = {
   pricing: { hora_usd_min: 45, fixo_usd_min: 800 },
@@ -73,28 +73,52 @@ test("gate: budget ausente NÃO rejeita", () => {
   assert.equal(r.ok, true);
 });
 
-test("scorer: vaga no nicho pontua bem; fit alto", () => {
-  const p = pontuar(vagaBase(), perfil, pesos);
-  assert.ok(p.score_detalhe.fit_skill >= 0.6, `fit baixo demais: ${p.score_detalhe.fit_skill}`);
-  assert.ok(p.score_base > 40, `score_base baixo: ${p.score_base}`);
+test("scorer v2: componente sem dado sai do numerador E do denominador", () => {
+  const semDados = { budget_min: null, budget_max: null, moeda: null, cliente_meta: {} };
+  // freelance sem budget e sem metadata de cliente: só fit + frescor determinísticos.
+  const det = componentesDeterministicos(vagaBase({ ...semDados, tipo: "freelance_fixo" }), perfil, pesos);
+  assert.ok(det.componentes.fit_skill, "fit sempre presente");
+  assert.equal(det.componentes.ticket, undefined, "ticket ausente sem budget");
+  assert.equal(det.componentes.qualidade_cliente, undefined, "qualidade ausente sem metadata");
+  assert.ok(det.componentes.frescor, "frescor presente (tem data)");
 });
 
-test("scorer: budget ausente penaliza freelance, mas NÃO emprego", () => {
-  const semBudget = { budget_min: null, budget_max: null, moeda: null };
-  const free = pontuar(vagaBase({ ...semBudget, tipo: "freelance_fixo" }), perfil, pesos);
-  assert.equal(free.score_detalhe.penalidades.budget_ausente, -4);
-  const emp = pontuar(vagaBase({ ...semBudget, tipo: "emprego" }), perfil, pesos);
-  assert.equal(emp.score_detalhe.penalidades.budget_ausente, undefined);
+test("scorer v2: renormaliza sobre pesos aplicáveis (fit 1.0 + viab 1.0 + frescor 0.4 = 91)", () => {
+  const det = { trilha: "freelance", componentes: {
+    fit_skill: { peso: 35, valor: 1.0 },
+    frescor: { peso: 10, valor: 0.4 },
+  } };
+  const { score, score_detalhe } = montarScore(det, 1.0, {}, pesos);
+  // (35*1 + 25*1 + 10*0.4) / (35+25+10) * 100 = 64/70*100 = 91.43
+  assert.equal(score, 91);
+  assert.equal(score_detalhe.denominador, 70);
+  assert.equal(score_detalhe.versao, 2);
+  assert.deepEqual(Object.keys(score_detalhe.pesos_aplicados).sort(), ["fit_skill", "frescor", "viabilidade_agentes"]);
 });
 
-test("scorer: grava a trilha e usa ticket próprio", () => {
-  const free = pontuar(vagaBase({ tipo: "freelance_fixo" }), perfil, pesos);
-  assert.equal(free.score_detalhe.trilha, "freelance");
+test("scorer v2: budget ausente NÃO gera penalidade (só some do denominador)", () => {
+  const det = componentesDeterministicos(vagaBase({ budget_min: null, budget_max: null, moeda: null }), perfil, pesos);
+  const { score_detalhe } = montarScore(det, 0.55, {}, pesos);
+  assert.deepEqual(score_detalhe.penalidades, {});
+  assert.equal(score_detalhe.ticket, undefined);
+});
+
+test("scorer v2: trilha e ticket próprio (emprego satura em EUR 110k)", () => {
   assert.equal(trilhaDe({ tipo: "emprego" }), "emprego");
-  // emprego: salário anual ~USD 118.8k (EUR 110k) satura ticket em 1.0
-  const emp = pontuar(vagaBase({ tipo: "emprego", budget_min: 130000, budget_max: 130000, moeda: "USD" }), perfil, pesos);
-  assert.equal(emp.score_detalhe.trilha, "emprego");
-  assert.equal(emp.score_detalhe.ticket, 1);
+  const det = componentesDeterministicos(
+    vagaBase({ tipo: "emprego", budget_min: 130000, budget_max: 130000, moeda: "USD" }),
+    perfil, pesos
+  );
+  assert.equal(det.trilha, "emprego");
+  assert.equal(det.componentes.ticket.valor, 1); // 130k USD > 110k EUR (~118.8k) → satura
+});
+
+test("scorer v2: red flag do LLM entra como penalidade absoluta", () => {
+  const pesosPen = { ...pesos, penalidades: { equity_ou_revshare: -40 } };
+  const det = { trilha: "freelance", componentes: { fit_skill: { peso: 35, valor: 1.0 } } };
+  const { score } = montarScore(det, 1.0, { equity_ou_revshare: -40 }, pesosPen);
+  // (35+25)/(60)*100 = 100; -40 = 60
+  assert.equal(score, 60);
 });
 
 test("gate: fit abaixo do mínimo é descartado independente de salário", () => {

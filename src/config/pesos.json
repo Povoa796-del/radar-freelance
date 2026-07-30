@@ -6,7 +6,6 @@
   "frescor": 10,
   "ticket_emprego_eur": { "min": 55000, "max": 110000 },
   "penalidades": {
-    "budget_ausente": -4,
     "equity_ou_revshare": -40,
     "teste_nao_pago": -25,
     "urgente_com_budget_baixo": -20,

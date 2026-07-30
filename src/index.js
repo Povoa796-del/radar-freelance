@@ -9,11 +9,12 @@ import { coletar } from "./agents/01-coletor.js";
 import { normalizar } from "./agents/02-normalizador.js";
 import { deduplicar } from "./agents/03-dedupe.js";
 import { filtrarGate } from "./agents/04-gate.js";
-import { pontuarLote } from "./agents/05-scorer.js";
 import { qualificar } from "./agents/06-qualificador.js";
 import { alertar } from "./agents/07-alerta.js";
 import { inserirVagas } from "./lib/supabase.js";
 import { gerarDigest } from "./digest.js";
+import { processarCallbacks } from "./callbacks.js";
+import { repontuar } from "./rescore.js";
 import { log, erro } from "./lib/log.js";
 
 // Carrega .env em dev; em CI as variáveis já vêm do ambiente (secrets).
@@ -32,6 +33,13 @@ async function ciclo() {
   const fontes = cfg("fontes.json");
   const t0 = Date.now();
 
+  // Processa cliques nos botões (interesse/descartar) antes de selecionar novos alertas.
+  try {
+    await processarCallbacks();
+  } catch (e) {
+    log(`callbacks: ignorado (${e.message})`);
+  }
+
   const coletas = await coletar({ fontesCfg: fontes.fontes, keywords: fontes.keywords });
   const vagas = normalizar(coletas);
   log(`normalizador: ${vagas.length} vagas`);
@@ -40,9 +48,7 @@ async function ciclo() {
   const { aprovadas, motivos } = filtrarGate(novas, perfil, fontes.gate);
   if (Object.keys(motivos).length) log("gate motivos:", JSON.stringify(motivos));
 
-  const pontuadas = pontuarLote(aprovadas, perfil, pesos);
-  const finais = await qualificar(pontuadas, perfil, pesos, {
-    scoreMinimo: fontes.alerta.score_minimo,
+  const finais = await qualificar(aprovadas, perfil, pesos, {
     maxAnalises: fontes.alerta.max_analises ?? 40,
   });
 
@@ -63,8 +69,12 @@ async function main() {
     await gerarDigest();
   } else if (modo === "--ciclo") {
     await ciclo();
+  } else if (modo === "--rescore") {
+    await repontuar();
+  } else if (modo === "--callbacks") {
+    await processarCallbacks();
   } else {
-    console.log("Uso: node src/index.js --ciclo | --digest");
+    console.log("Uso: node src/index.js --ciclo | --digest | --rescore | --callbacks");
     process.exit(1);
   }
 }

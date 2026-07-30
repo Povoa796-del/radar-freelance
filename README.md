@@ -46,10 +46,35 @@ do projeto, ou via `supabase db`.
 ## Comandos
 
 ```bash
-node src/index.js --ciclo    # um ciclo completo (coleta → alerta)
-node src/index.js --digest   # relatório semanal (reports/YYYY-WW.md)
-npm test                     # testes de normalize() + funções puras
+node src/index.js --ciclo      # um ciclo completo (callbacks → coleta → alerta)
+node src/index.js --digest     # relatório semanal (reports/YYYY-WW.md)
+node src/index.js --callbacks  # processa cliques nos botões do Telegram (feedback loop)
+node src/index.js --rescore    # re-pontua as vagas gravadas com o modelo atual (v2)
+npm test                       # testes de normalize() + scoring + funções puras
 ```
+
+## Modelo de score (v2)
+
+O score é **renormalizado sobre os pesos com dado**: um componente sem dado (ticket
+sem budget publicado, qualidade_cliente sem metadata) sai do numerador **e** do
+denominador — não conta como 0 nem como 0.5.
+
+```
+score = (Σ peso·valor dos componentes presentes) / (Σ pesos aplicáveis) · 100
+```
+
+Só pontua quem tem `fit_skill` **e** `viabilidade_agentes` (60 dos 100 pesos); sem um
+dos dois a vaga é marcada `descartado` / `dados_insuficientes`. Budget ausente **não**
+penaliza — o alerta exibe "⚠️ budget não publicado" para você decidir. Duas trilhas
+independentes (`freelance` e `emprego`), cada uma com corte e ticket próprios; o alerta
+leva até 3 freelance + 2 emprego. Tudo auditável em `vagas.score_detalhe` (`versao`,
+`pesos_aplicados`, `denominador`).
+
+## Feedback loop (botões)
+
+Os botões [Interesse]/[Descartar] gravam `vagas.status` via `--callbacks`, que roda no
+início de cada ciclo (lê os cliques por `getUpdates`, sem servidor). Para resposta
+instantânea, a seção 14 do brief descreve um webhook em Cloudflare Worker.
 
 ## Configuração (sem tocar em código)
 

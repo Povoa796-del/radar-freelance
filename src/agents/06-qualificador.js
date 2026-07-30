@@ -1,6 +1,8 @@
-// 06 — qualificador (LLM). Determinístico primeiro (05), LLM só no que pode chegar ao
-// corte de alerta — assim uma run de 200 vagas custa centavos.
+// 06 — qualificador (LLM). O fit mínimo no gate (04) já limitou o volume, então TODAS as
+// aprovadas vão à LLM: sem viabilidade não há score (guarda-corpo v2). Prioriza por fit
+// e respeita um teto de análises por segurança de custo.
 import { deepseek } from "../lib/llm.js";
+import { componentesDeterministicos, montarScore } from "./05-scorer.js";
 import { log, warn } from "../lib/log.js";
 
 const VIABILIDADE = { alta: 1.0, media: 0.55, baixa: 0.15 };
@@ -27,27 +29,20 @@ Responda APENAS com JSON, sem markdown:
 }`;
 }
 
-// Penalidades textuais baratas, independentes do LLM.
-function penalidadesTexto(vaga, perfil, pesos) {
+// Penalidades (SEM budget_ausente — removida na v2): texto + red flags do LLM.
+function penalidades(vaga, llm, perfil, pesos) {
   const texto = `${vaga.titulo} ${vaga.descricao || ""}`.toLowerCase();
+  const pen = pesos.penalidades || {};
   const p = {};
   if (/\b(urgent|asap|immediately|urgente)\b/.test(texto) && vaga.budget_usd != null) {
     const min = perfil.pricing.fixo_usd_min || 800;
-    if (vaga.budget_usd < 2 * min) p.urgente_com_budget_baixo = pesos.penalidades.urgente_com_budget_baixo;
+    if (vaga.budget_usd < 2 * min && pen.urgente_com_budget_baixo) p.urgente_com_budget_baixo = pen.urgente_com_budget_baixo;
   }
-  if (/\bnda\b/.test(texto.slice(0, 300))) p.nda_antes_da_descricao = pesos.penalidades.nda_antes_da_descricao;
+  if (/\bnda\b/.test(texto.slice(0, 300)) && pen.nda_antes_da_descricao) p.nda_antes_da_descricao = pen.nda_antes_da_descricao;
+  for (const f of llm?.red_flags || []) if (pen[f] != null) p[f] = pen[f];
   return p;
 }
 
-function aplicarRedFlags(redFlags, pesos) {
-  const p = {};
-  for (const f of redFlags || []) {
-    if (pesos.penalidades[f] != null) p[f] = pesos.penalidades[f];
-  }
-  return p;
-}
-
-// Executa fn sobre itens com concorrência limitada.
 async function comPool(itens, limite, fn) {
   const resultado = [];
   let i = 0;
@@ -61,49 +56,39 @@ async function comPool(itens, limite, fn) {
   return resultado;
 }
 
-function finalizar(vaga, viabilidadeNorm, penalidades, pesos, llm_analise) {
-  const somaPen = Object.values(penalidades).reduce((a, b) => a + b, 0);
-  const score = Math.max(0, Math.round(vaga.score_base + viabilidadeNorm * pesos.viabilidade_agentes + somaPen));
+// Sem viabilidade não pontua: guarda-corpo v2 (item 3 da spec).
+function descartar(vaga, det, motivo) {
+  const valores = Object.fromEntries(
+    Object.entries(det.componentes).map(([k, c]) => [k, Number(c.valor.toFixed(2))])
+  );
   return {
     ...vaga,
-    score,
-    score_detalhe: {
-      ...vaga.score_detalhe,
-      viabilidade_agentes: Number(viabilidadeNorm.toFixed(2)),
-      penalidades: { ...vaga.score_detalhe.penalidades, ...penalidades },
-    },
-    llm_analise: llm_analise || null,
+    score: null,
+    status: "descartado",
+    score_detalhe: { versao: 2, trilha: det.trilha, motivo, ...valores },
+    llm_analise: null,
   };
 }
 
-export async function qualificar(vagas, perfil, pesos, { scoreMinimo = 70, maxAnalises = 40 } = {}) {
-  // Só vale a pena analisar quem pode alcançar o corte mesmo com viabilidade máxima.
-  // O fit mínimo já foi garantido no gate (04).
-  const piso = scoreMinimo - pesos.viabilidade_agentes;
-  const candidatas = vagas
-    .filter((v) => v.score_base >= piso)
-    .sort((a, b) => b.score_base - a.score_base)
-    .slice(0, maxAnalises);
-  const idsAnalisar = new Set(candidatas.map((v) => v.hash));
-  log(`qualificador: ${candidatas.length}/${vagas.length} vão à LLM (piso score_base ${piso})`);
+export async function qualificar(vagas, perfil, pesos, { maxAnalises = 40 } = {}) {
+  const comDet = vagas.map((v) => ({ v, det: componentesDeterministicos(v, perfil, pesos) }));
+  comDet.sort((a, b) => b.det.componentes.fit_skill.valor - a.det.componentes.fit_skill.valor);
+  const analisar = comDet.slice(0, maxAnalises);
+  const excedente = comDet.slice(maxAnalises);
+  log(`qualificador: ${analisar.length} à LLM${excedente.length ? ` (+${excedente.length} acima do teto → descartadas)` : ""}`);
 
-  const analisadas = await comPool(candidatas, 5, async (vaga) => {
-    const penTexto = penalidadesTexto(vaga, perfil, pesos);
+  const pontuadas = await comPool(analisar, 5, async ({ v, det }) => {
     try {
-      const r = await deepseek(montarPrompt(vaga, perfil), { json: true, temperatura: 0 });
+      const r = await deepseek(montarPrompt(v, perfil), { json: true, temperatura: 0 });
       const vNorm = VIABILIDADE[r.viabilidade_agentes] ?? 0.55;
-      const pen = { ...penTexto, ...aplicarRedFlags(r.red_flags, pesos) };
-      return finalizar(vaga, vNorm, pen, pesos, r);
+      const { score, score_detalhe } = montarScore(det, vNorm, penalidades(v, r, perfil, pesos), pesos);
+      return { ...v, score, score_detalhe, llm_analise: r, status: "novo" };
     } catch (err) {
-      warn(`LLM falhou na vaga "${vaga.titulo?.slice(0, 40)}": ${err.message}`);
-      return finalizar(vaga, 0.55, penTexto, pesos, null); // neutro em caso de falha
+      warn(`LLM falhou em "${v.titulo?.slice(0, 40)}": ${err.message}`);
+      return descartar(v, det, "dados_insuficientes"); // sem viabilidade → não pontua
     }
   });
 
-  // Quem não foi à LLM: viabilidade neutra, sem red flags. Não deve alcançar o corte.
-  const naoAnalisadas = vagas
-    .filter((v) => !idsAnalisar.has(v.hash))
-    .map((v) => finalizar(v, 0.55, {}, pesos, null));
-
-  return [...analisadas, ...naoAnalisadas];
+  const descartadas = excedente.map(({ v, det }) => descartar(v, det, "dados_insuficientes"));
+  return [...pontuadas, ...descartadas];
 }

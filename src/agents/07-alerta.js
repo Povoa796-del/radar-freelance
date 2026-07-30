@@ -43,6 +43,8 @@ export function formatarVaga(v) {
   }
   if (a.esforco_horas_estimado) linhas.push(`<b>Esforço:</b> ~${esc(a.esforco_horas_estimado)}h`);
   if (a.risco_principal) linhas.push(`<b>Risco:</b> ${esc(a.risco_principal)}`);
+  // Budget ausente não penaliza o score (v2) — é exibido para você decidir.
+  if (v.budget_usd == null) linhas.push("⚠️ budget não publicado — negociar escopo antes");
   linhas.push("", `🔗 ${esc(v.url)}`);
   return linhas.join("\n");
 }
