@@ -2,7 +2,7 @@
   "gate": {
     "moedas_aceitas": ["USD", "EUR", "GBP", "CHF"],
     "max_dias_publicado": 7,
-    "fit_minimo": 0.45
+    "fit_minimo": 0.25
   },
   "alerta": {
     "score_minimo": 70,
