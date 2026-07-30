@@ -185,6 +185,33 @@ test("geo: híbrido em Braga → z1", () => {
   assert.equal(r.local, "Braga");
 });
 
+test("geo precedência: Vigo casa z0-cidade E z1-província → cidade ganha (z0)", () => {
+  const geo = {
+    aceita_presencial: true,
+    zonas: {
+      z0: { cidades: ["Vigo"], provincias: [] },
+      z1: { cidades: [], provincias: ["Pontevedra"] },
+    },
+  };
+  const r = avaliarGeo({ titulo: "On-site Dev", descricao: "on-site", remoto: false, cliente_meta: { location: "Vigo, Pontevedra, Spain" } }, geo);
+  assert.equal(r.zona, "z0");
+  assert.equal(r.local, "Vigo");
+});
+
+test("geo precedência: Monção casa z0-cidade E z1-província → cidade ganha (z0)", () => {
+  // Monção fica na província de Viana do Castelo (z1), mas está listada como cidade em z0.
+  const geo = {
+    aceita_presencial: true,
+    zonas: {
+      z0: { cidades: ["Vigo", "Monção"], provincias: [] },
+      z1: { cidades: [], provincias: ["Viana do Castelo"] },
+    },
+  };
+  const r = avaliarGeo({ titulo: "Hybrid Dev", descricao: "hybrid", remoto: false, cliente_meta: { location: "Monção, Viana do Castelo, Portugal" } }, geo);
+  assert.equal(r.zona, "z0"); // cidade (z0) vence a província (z1)
+  assert.equal(r.local, "Monção");
+});
+
 test("geo: presencial fora das zonas → zona null", () => {
   const r = avaliarGeo({ titulo: "On-site Engineer", descricao: "on-site in Madrid", remoto: false, cliente_meta: { location: "Madrid" } }, geoAtivo);
   assert.equal(r.presencial, true);

@@ -23,6 +23,7 @@
     "remotive": { "enabled": true, "rateLimitMs": 1000, "categorias": ["software-dev", "data", "marketing"], "limit": 50 },
     "jobicy": { "enabled": true, "rateLimitMs": 1000, "count": 50, "industries": ["dev", "data-science", "marketing"] },
     "arbeitnow": { "enabled": true, "rateLimitMs": 1000 },
-    "hn-whoishiring": { "enabled": true, "rateLimitMs": 500 }
+    "hn-whoishiring": { "enabled": true, "rateLimitMs": 500 },
+    "landing-jobs": { "enabled": false, "rateLimitMs": 1000, "limit": 50 }
   }
 }

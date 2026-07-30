@@ -12,6 +12,7 @@ import remotive from "../src/sources/remotive.js";
 import jobicy from "../src/sources/jobicy.js";
 import arbeitnow from "../src/sources/arbeitnow.js";
 import hn from "../src/sources/hn-whoishiring.js";
+import landingJobs from "../src/sources/landing-jobs.js";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const fixture = (nome) => JSON.parse(readFileSync(join(DIR, "fixtures", `${nome}.json`), "utf8"));
@@ -67,6 +68,14 @@ test("hn-whoishiring.normalize", () => {
   // Post em prosa (sem cabeçalho pipe) não deve inventar budget.
   const temPipe = String(fixture("hn-whoishiring").text).includes("|");
   if (!temPipe) assert.equal(v.budget_usd, null, "HN em prosa não deveria ter budget");
+});
+
+test("landing-jobs.normalize", () => {
+  const v = landingJobs.normalize(fixture("landing-jobs"));
+  checarInvariantes(v, "landing-jobs");
+  assert.equal(v.moeda, "EUR");
+  assert.ok(v.empresa, "empresa deveria vir do slug da URL");
+  assert.ok(v.cliente_meta.location, "location deveria ser preenchida");
 });
 
 test("normalize é determinístico (mesmo input -> mesmo hash)", () => {

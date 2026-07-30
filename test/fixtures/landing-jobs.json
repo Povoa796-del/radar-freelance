@@ -1,0 +1,33 @@
+{
+  "id": 19066,
+  "currency_code": "EUR",
+  "expires_at": "2026-09-02",
+  "main_requirements": "<ul><li>6-8 years of experience in software development with Java.</li><li>5+ years working with Spring Boot.</li><li>Experience with SQL.</li><li>Proactively solution oriented (Nothing is lost in the cracks).</li><li>Always on the ball.</li><li>Displays maturity and loyalty to the processes, organization, and decisions.</li><li>Dares and wants to challenge status quo.</li><li>Keeping cool and taking qualified decisions under pressure.</li><li>Able and willing to mentor and teach others.</li><li>Is very adept at managing own time and priorities.</li><li>Collaboration and help-seeking are seen as strength.</li></ul>",
+  "nice_to_have": "<ul><li>Experience with Cloud Native engineering.</li><li>Experience with Kafka.</li><li>Experience with Docker and Kubernetes.</li><li>Test Driven Development (TDD).</li></ul>",
+  "perks": "<ul><li>Permanent contract with Inscale</li><li>14 salaries</li><li>22 days vacation</li><li>Portugal Holidays</li><li>Health insurance</li><li>Flex benefits</li><li>Career plan&nbsp;</li></ul>",
+  "relocation_paid": false,
+  "role_description": "<div>Our client is a Global retail chain that brings Scandinavian design and quality to the world through an extensive range of quality products for sleeping and living. Known for its commitment to simplicity, functionality, and affordability.&nbsp;<br><br></div><div>Teamwork, innovation, and a customer-focused mindset as core values.&nbsp;<br><br></div><div>Our culture is built on Scandinavian roots, emphasizing respect, responsibility, and sustainable practices. We are proud to provide opportunities for career growth in a dynamic and supportive environment. <br><br>The Java team is responsible for a wide range of in-house developed applications. So, you will get the opportunity to work in different business areas and with different technologies. <br><br><strong>Responsibilities<br></strong><br></div><ul><li>Are passionate about IT and software development.</li><li>Are skilled Java developers, who continuously strives to improve their skills.</li><li>Write a clean code and create software architecture that are flexible.</li><li>Are experienced with Java web technologies.</li><li>Write thorough tests of the code and are familiar with test driven development.</li><li>Can drive and facilitate design discussions.</li><li>Have extensive knowledge of distributed systems and concurrency.</li></ul>",
+  "title": "Senior Java Software Developer",
+  "created_at": "2025-02-26T08:53:02.254Z",
+  "updated_at": "2026-07-22T10:24:41.490Z",
+  "published_at": "2025-02-26T09:38:38.127Z",
+  "type": "Full-time",
+  "remote": false,
+  "gross_salary_low": 50000,
+  "gross_salary_high": 67000,
+  "tags": [
+    "Spring Boot",
+    "Java",
+    "SQL",
+    "Apache Kafka",
+    "Kubernetes",
+    "Docker"
+  ],
+  "url": "https://landing.jobs/at/inscale/senior-java-software-developer-in-lisbon-2025",
+  "locations": [
+    {
+      "city": "Lisbon",
+      "country_code": "PT"
+    }
+  ]
+}

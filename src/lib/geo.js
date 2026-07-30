@@ -28,10 +28,26 @@ export function avaliarGeo(vaga, geo) {
   const hay = normalizarTexto(
     [vaga.fuso_exigido, vaga.cliente_meta?.location, vaga.titulo, vaga.descricao].filter(Boolean).join(" ")
   );
-  for (const [zona, def] of Object.entries(geo?.zonas || {})) {
-    for (const termo of [...(def.cidades || []), ...(def.provincias || [])]) {
-      if (casaTermo(hay, termo)) return { presencial: true, modalidade, zona, local: termo };
+
+  // Precedência: o match mais específico ganha. Chave = (tipo, zona), onde
+  // tipo cidade(0) < província(1) e zona z0(0) < z1(1) < z2(2). Menor chave vence.
+  const zonas = Object.keys(geo?.zonas || {});
+  let melhor = null; // { tipoRank, zonaRank, zona, local }
+  const considerar = (m) => {
+    if (!melhor || m.tipoRank < melhor.tipoRank || (m.tipoRank === melhor.tipoRank && m.zonaRank < melhor.zonaRank)) {
+      melhor = m;
     }
-  }
+  };
+  zonas.forEach((zona, zonaRank) => {
+    const def = geo.zonas[zona];
+    for (const cidade of def.cidades || []) {
+      if (casaTermo(hay, cidade)) considerar({ tipoRank: 0, zonaRank, zona, local: cidade });
+    }
+    for (const prov of def.provincias || []) {
+      if (casaTermo(hay, prov)) considerar({ tipoRank: 1, zonaRank, zona, local: prov });
+    }
+  });
+
+  if (melhor) return { presencial: true, modalidade, zona: melhor.zona, local: melhor.local };
   return { presencial: true, modalidade, zona: null, local: null };
 }

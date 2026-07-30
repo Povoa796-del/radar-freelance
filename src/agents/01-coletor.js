@@ -6,6 +6,7 @@ import remotive from "../sources/remotive.js";
 import jobicy from "../sources/jobicy.js";
 import arbeitnow from "../sources/arbeitnow.js";
 import hn from "../sources/hn-whoishiring.js";
+import landingJobs from "../sources/landing-jobs.js";
 import { registrarSaudeFonte } from "../lib/supabase.js";
 import { log, warn } from "../lib/log.js";
 
@@ -16,6 +17,7 @@ export const ADAPTERS = {
   jobicy,
   arbeitnow,
   "hn-whoishiring": hn,
+  "landing-jobs": landingJobs,
 };
 
 export async function coletar({ fontesCfg = {}, keywords = [], since = new Date(0) } = {}) {
