@@ -9,6 +9,16 @@ import { avaliarGate } from "../src/agents/04-gate.js";
 import { componentesDeterministicos, montarScore, trilhaDe } from "../src/agents/05-scorer.js";
 import { formatarVaga } from "../src/agents/07-alerta.js";
 import { decidirCliques } from "../src/callbacks.js";
+import { avaliarGeo } from "../src/lib/geo.js";
+
+const geoAtivo = {
+  aceita_presencial: true,
+  zonas: {
+    z0: { cidades: ["Vigo"], provincias: [] },
+    z1: { cidades: ["Braga", "Pontevedra", "Viana do Castelo"], provincias: ["Pontevedra", "Braga"] },
+    z2: { cidades: ["Porto"], provincias: ["Porto"] },
+  },
+};
 
 const perfil = {
   pricing: { hora_usd_min: 45, fixo_usd_min: 800 },
@@ -158,6 +168,53 @@ test("alerta: sonda ganha marcação visual; item de alerta não", () => {
   const alerta = formatarVaga({ ...base, score: 82, score_detalhe: { banda: "alerta" } });
   assert.match(alerta, /🎯/);
   assert.doesNotMatch(alerta, /SONDA/);
+});
+
+test("geo: remoto não é presencial (sem zona)", () => {
+  const r = avaliarGeo({ titulo: "Remote Node Engineer", descricao: "fully remote role", remoto: true }, geoAtivo);
+  assert.equal(r.presencial, false);
+  assert.equal(r.modalidade, "remoto");
+  assert.equal(r.zona, null);
+});
+
+test("geo: híbrido em Braga → z1", () => {
+  const r = avaliarGeo({ titulo: "Engineer (Hybrid)", descricao: "hybrid role", remoto: false, cliente_meta: { location: "Braga, Portugal" } }, geoAtivo);
+  assert.equal(r.presencial, true);
+  assert.equal(r.modalidade, "híbrido");
+  assert.equal(r.zona, "z1");
+  assert.equal(r.local, "Braga");
+});
+
+test("geo: presencial fora das zonas → zona null", () => {
+  const r = avaliarGeo({ titulo: "On-site Engineer", descricao: "on-site in Madrid", remoto: false, cliente_meta: { location: "Madrid" } }, geoAtivo);
+  assert.equal(r.presencial, true);
+  assert.equal(r.zona, null);
+});
+
+test("gate geo: aceita_presencial=false mantém comportamento antigo", () => {
+  const perfilOff = { ...perfil, geo: { aceita_presencial: false, zonas: geoAtivo.zonas } };
+  const vagaPres = vagaBase({ remoto: false, descricao: "on-site role in Braga", cliente_meta: { location: "Braga" } });
+  const r = avaliarGate(vagaPres, perfilOff, gateCfg);
+  assert.equal(r.ok, false);
+  assert.match(r.motivo, /presença física/);
+});
+
+test("gate geo: ativo → em zona passa; fora de zona = fora_de_zona; remoto passa", () => {
+  const perfilOn = { ...perfil, geo: geoAtivo };
+  const emZona = vagaBase({ remoto: false, descricao: "hybrid in Braga", cliente_meta: { location: "Braga" } });
+  assert.equal(avaliarGate(emZona, perfilOn, gateCfg).ok, true);
+  const foraZona = vagaBase({ remoto: false, descricao: "on-site in Madrid", cliente_meta: { location: "Madrid" } });
+  assert.equal(avaliarGate(foraZona, perfilOn, gateCfg).motivo, "fora_de_zona");
+  const remota = vagaBase({ remoto: true });
+  assert.equal(avaliarGate(remota, perfilOn, gateCfg).ok, true);
+});
+
+test("alerta: linha 📍 só aparece para presencial/híbrido com zona", () => {
+  const base = { score: 78, fonte: "adzuna", titulo: "AI Engineer", empresa: "X", tipo: "emprego", budget_usd: 90000, publicado_em: new Date().toISOString(), llm_analise: { viabilidade_agentes: "alta" } };
+  const pres = formatarVaga({ ...base, score_detalhe: { zona: "z1", local: "Braga", modalidade: "híbrido" } });
+  assert.match(pres, /📍 Braga · z1 híbrido/);
+  const remota = formatarVaga({ ...base, score_detalhe: { zona: null, modalidade: "remoto" } });
+  assert.doesNotMatch(remota, /📍/);
 });
 
 test("gate: fit abaixo do mínimo é descartado independente de salário", () => {

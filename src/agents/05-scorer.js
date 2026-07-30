@@ -4,6 +4,7 @@
 // A viabilidade_agentes é injetada pela camada LLM (06) via montarScore().
 import { fitSkill } from "../lib/fit.js";
 import { paraUSD } from "../lib/moeda.js";
+import { avaliarGeo } from "../lib/geo.js";
 
 export function trilhaDe(vaga) {
   return vaga.tipo === "emprego" ? "emprego" : "freelance";
@@ -56,12 +57,14 @@ export function componentesDeterministicos(vaga, perfil, pesos) {
   if (q != null) componentes.qualidade_cliente = { peso: pesos.qualidade_cliente, valor: q };
   if (vaga.publicado_em) componentes.frescor = { peso: pesos.frescor, valor: frescorValor(vaga) };
 
-  return { trilha, componentes };
+  // Geo é metadado (não entra no cálculo) — só para gravar e exibir.
+  const geo = avaliarGeo(vaga, perfil.geo);
+  return { trilha, componentes, geo };
 }
 
 // Renormaliza sobre os pesos aplicáveis (inclui viabilidade) e subtrai penalidades.
 // Só deve ser chamada quando fit_skill E viabilidade_agentes existem (guarda-corpo em 06).
-export function montarScore({ trilha, componentes }, viabilidadeNorm, penalidades = {}, pesos) {
+export function montarScore({ trilha, componentes, geo }, viabilidadeNorm, penalidades = {}, pesos) {
   const todos = {
     ...componentes,
     viabilidade_agentes: { peso: pesos.viabilidade_agentes, valor: viabilidadeNorm },
@@ -92,6 +95,10 @@ export function montarScore({ trilha, componentes }, viabilidadeNorm, penalidade
       denominador: den,
       renormalizado: Math.round(renormalizado),
       penalidades,
+      // Metadado geográfico (fora do cálculo).
+      zona: geo?.zona ?? null,
+      local: geo?.local ?? null,
+      modalidade: geo?.modalidade ?? "remoto",
     },
   };
 }

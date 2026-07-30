@@ -2,8 +2,8 @@
 // Budget ausente NÃO é rejeição (só penalidade no score) — metade das vagas não publica faixa.
 import { log } from "../lib/log.js";
 import { fitSkill } from "../lib/fit.js";
+import { avaliarGeo } from "../lib/geo.js";
 
-const RE_PRESENCIAL = /\b(on-?site|in-?office|hybrid|relocat|must be (?:located|based)|presencial|no remote)\b/i;
 const RE_OVERLAP_DURO = /(overlap|work).{0,30}(full[- ]?day|8\s*hours|6\s*hours|7\s*hours)|must overlap.{0,30}(pst|pacific|est|eastern)/i;
 const RE_IDIOMA_OUTRO = /\bfluent\s+(?:in\s+)?(german|french|dutch|italian|japanese|mandarin|chinese|korean|arabic|russian|polish)\b/i;
 
@@ -41,9 +41,18 @@ export function avaliarGate(vaga, perfil, gateCfg) {
     return { ok: false, motivo: `moeda ${vaga.moeda} fora de ${moedas.join("/")}` };
   }
 
-  // Presença física / relocação
-  if (vaga.remoto === false || RE_PRESENCIAL.test(texto)) {
-    return { ok: false, motivo: "exige presença física / relocação" };
+  // Geografia: remoto passa; presencial/híbrido só passa dentro das zonas (z0/z1/z2)
+  // e apenas quando geo.aceita_presencial. Com o switch desligado, comporta-se como antes.
+  const geo = perfil.geo;
+  const g = avaliarGeo(vaga, geo);
+  if (g.presencial) {
+    if (!geo?.aceita_presencial) {
+      return { ok: false, motivo: "exige presença física / relocação" };
+    }
+    if (!g.zona) {
+      return { ok: false, motivo: "fora_de_zona" };
+    }
+    // presencial/híbrido dentro de zona → passa
   }
 
   // Overlap de fuso exigente
