@@ -30,15 +30,23 @@ export async function gerarDigest() {
   const porFonte = {};
   for (const v of vagas) porFonte[v.fonte] = (porFonte[v.fonte] || 0) + 1;
 
+  const INTERESSE = ["interesse", "aplicado", "resposta", "ganho"];
   const pontuadas = vagas.filter((v) => v.score != null);
   const altas = pontuadas.filter((v) => v.score >= 70);
-  const alertadas = vagas.filter((v) => !["novo", "descartado"].includes(v.status));
-  const interesse = vagas.filter((v) => ["interesse", "aplicado", "resposta", "ganho"].includes(v.status));
   const scoreMedio = pontuadas.length
     ? (pontuadas.reduce((a, v) => a + v.score, 0) / pontuadas.length).toFixed(1)
     : "0";
   const topSkills = contarSkills(altas).slice(0, 3);
-  const taxaInteresse = alertadas.length ? ((interesse.length / alertadas.length) * 100).toFixed(0) : "0";
+
+  // Foi ao alerta se tem banda gravada. Taxa de interesse separada por banda.
+  const enviadas = vagas.filter((v) => v.score_detalhe?.banda);
+  const taxaBanda = (banda) => {
+    const sent = enviadas.filter((v) => v.score_detalhe.banda === banda);
+    const inter = sent.filter((v) => INTERESSE.includes(v.status));
+    return { sent: sent.length, inter: inter.length, pct: sent.length ? Math.round((inter.length / sent.length) * 100) : 0 };
+  };
+  const tAlerta = taxaBanda("alerta");
+  const tSonda = taxaBanda("sonda");
 
   const semana = semanaISO();
   const linhasFonte = Object.entries(porFonte)
@@ -54,7 +62,15 @@ export async function gerarDigest() {
 - Vagas coletadas (7d): **${total}**
 - Passaram para score alto (≥70): **${altas.length}**
 - Score médio: **${scoreMedio}**
-- Alertadas: **${alertadas.length}** · marcadas "interesse+": **${interesse.length}** (${taxaInteresse}%)
+
+## Taxa de interesse por banda
+| Banda | Enviadas | Interesse | Taxa |
+|---|---|---|---|
+| alerta (≥70) | ${tAlerta.sent} | ${tAlerta.inter} | ${tAlerta.pct}% |
+| sonda (50–69) | ${tSonda.sent} | ${tSonda.inter} | ${tSonda.pct}% |
+
+> Sonda com taxa próxima ou acima da alerta = o corte 70 está alto demais para esse tipo.
+> Sonda perto de zero = o corte está protegendo bem sua atenção.
 
 ## Por fonte
 | Fonte | Coletadas |
@@ -79,12 +95,18 @@ ${linhasSaude || "| — | - | - | - |"}
     const resumo = [
       `📊 <b>Digest ${semana}</b>`,
       `Coletadas: ${total} · score alto: ${altas.length} · médio: ${scoreMedio}`,
-      `Alertadas: ${alertadas.length} · interesse: ${interesse.length} (${taxaInteresse}%)`,
+      `🎯 alerta (≥70): ${tAlerta.inter}/${tAlerta.sent} interesse (${tAlerta.pct}%)`,
+      `🔬 sonda (50–69): ${tSonda.inter}/${tSonda.sent} interesse (${tSonda.pct}%)`,
       "",
       `<b>Top skills (score alto):</b> ${topSkills.map(([s]) => esc(s)).join(", ") || "—"}`,
       `<b>Fontes:</b> ${Object.entries(porFonte).map(([f, n]) => `${esc(f)} ${n}`).join(" · ") || "—"}`,
     ].join("\n");
-    await enviarMensagem(resumo);
+    // O .md já foi gravado; uma falha no Telegram não deve derrubar o digest.
+    try {
+      await enviarMensagem(resumo);
+    } catch (err) {
+      log(`digest: resumo no Telegram falhou (${err.message}); relatório em ${arquivo}`);
+    }
   }
   return { arquivo, total, altas: altas.length };
 }

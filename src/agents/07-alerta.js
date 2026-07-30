@@ -1,8 +1,10 @@
 // 07 — alerta curado. Seleciona status 'novo' e score >= corte, ordena, corta em N.
 // Se nada passa, NÃO manda nada (radar que manda mensagem vazia vira ruído).
-import { candidatasAlertaTrilha, marcarStatus, registrarAlerta } from "../lib/supabase.js";
+import { candidatasAlertaTrilha, candidataSonda, atualizarScore, registrarAlerta } from "../lib/supabase.js";
 import { enviarMensagem, esc, telegramConfigurado } from "../lib/telegram.js";
 import { log, warn } from "../lib/log.js";
+
+const SONDA_MIN = 50; // banda de exploração: [SONDA_MIN, scoreMinimo)
 
 const TIPOS_TRILHA = {
   freelance: ["freelance_fixo", "freelance_hora"],
@@ -32,11 +34,14 @@ function budgetLabel(v) {
 
 export function formatarVaga(v) {
   const a = v.llm_analise || {};
-  const linhas = [
-    `🎯 <b>${v.score} · ${esc(v.fonte)}</b>`,
+  const ehSonda = v.score_detalhe?.banda === "sonda";
+  const linhas = [];
+  if (ehSonda) linhas.push("🔬 <b>SONDA — abaixo do corte, me diz se presta</b>");
+  linhas.push(
+    `${ehSonda ? "🔬" : "🎯"} <b>${v.score} · ${esc(v.fonte)}</b>`,
     esc(v.titulo),
-    `${esc(v.empresa || "—")} · ${budgetLabel(v)} · ${TIPO_LABEL[v.tipo] || "—"} · ${idadeRelativa(v.publicado_em)}`,
-  ];
+    `${esc(v.empresa || "—")} · ${budgetLabel(v)} · ${TIPO_LABEL[v.tipo] || "—"} · ${idadeRelativa(v.publicado_em)}`
+  );
   if (a.necessidade_real) linhas.push("", esc(a.necessidade_real));
   if (a.viabilidade_agentes) {
     linhas.push(`<b>Viabilidade:</b> ${esc(a.viabilidade_agentes)} — ${esc(a.justificativa_viabilidade || "")}`);
@@ -59,42 +64,51 @@ function botoes(id) {
 }
 
 export async function alertar({ scoreMinimo = 70, trilhas = { freelance: { max: 3 }, emprego: { max: 2 } } } = {}) {
-  // Cada trilha é rankeada e cortada independentemente — não competem no mesmo ranking.
+  // Banda 'alerta': cada trilha rankeada e cortada independentemente (score >= corte).
   const porTrilha = {};
   for (const [nome, cfg] of Object.entries(trilhas)) {
     const scoreMin = cfg.score_minimo ?? scoreMinimo;
     porTrilha[nome] = await candidatasAlertaTrilha(scoreMin, TIPOS_TRILHA[nome], cfg.max);
   }
-  const candidatas = Object.values(porTrilha).flat();
+  const alertaItens = Object.values(porTrilha).flat();
+  for (const v of alertaItens) v.score_detalhe = { ...v.score_detalhe, banda: "alerta" };
 
-  const resumoTrilhas = Object.entries(porTrilha).map(([n, v]) => `${n}:${v.length}`).join(" ");
-  if (!candidatas.length) {
-    log(`alerta: nada com score >= ${scoreMinimo} em nenhuma trilha (${resumoTrilhas}), não envio mensagem`);
+  // Banda 'sonda': 1 item de maior score na faixa [50, corte) — braço de exploração.
+  const sonda = await candidataSonda(SONDA_MIN, scoreMinimo);
+  if (sonda) sonda.score_detalhe = { ...sonda.score_detalhe, banda: "sonda" };
+
+  // Itens reais primeiro; a sonda por último, para não competir pela atenção.
+  const selecionadas = [...alertaItens, ...(sonda ? [sonda] : [])];
+  const resumo = `${Object.entries(porTrilha).map(([n, v]) => `${n}:${v.length}`).join(" ")} sonda:${sonda ? 1 : 0}`;
+
+  if (!selecionadas.length) {
+    log(`alerta: nada em nenhuma banda (${resumo}), não envio mensagem`);
     return { enviadas: 0 };
   }
-  log(`alerta: candidatas por trilha → ${resumoTrilhas}`);
+  log(`alerta: ${resumo}`);
 
   if (!telegramConfigurado()) {
-    warn(`alerta: Telegram não configurado; ${candidatas.length} oportunidades ficariam de fora`);
-    return { enviadas: 0, semTelegram: true, candidatas };
+    warn(`alerta: Telegram não configurado; ${selecionadas.length} item(ns) ficariam de fora`);
+    return { enviadas: 0, semTelegram: true, candidatas: selecionadas };
   }
 
   let enviadas = 0;
-  const idsOk = [];
-  for (const v of candidatas) {
+  const enviados = [];
+  for (const v of selecionadas) {
     try {
       await enviarMensagem(formatarVaga(v), { botoes: botoes(v.id) });
-      idsOk.push(v.id);
+      enviados.push(v);
       enviadas++;
     } catch (err) {
       warn(`alerta: falha ao enviar "${v.titulo?.slice(0, 40)}": ${err.message}`);
     }
   }
 
-  if (idsOk.length) {
-    await marcarStatus(idsOk, "alertado");
-    await registrarAlerta(idsOk);
+  // Persiste status 'alertado' + a banda (para separar as taxas no digest).
+  for (const v of enviados) {
+    await atualizarScore(v.id, { status: "alertado", score_detalhe: v.score_detalhe });
   }
-  log(`alerta: ${enviadas} oportunidade(s) enviada(s)`);
+  if (enviados.length) await registrarAlerta(enviados.map((v) => v.id));
+  log(`alerta: ${enviadas} item(ns) enviado(s) (${resumo})`);
   return { enviadas };
 }

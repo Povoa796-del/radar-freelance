@@ -7,6 +7,7 @@ import { similaridade, shingles, normalizarTexto } from "../src/lib/jaccard.js";
 import { montarVaga, urlCanonica, parseSalario } from "../src/lib/vaga.js";
 import { avaliarGate } from "../src/agents/04-gate.js";
 import { componentesDeterministicos, montarScore, trilhaDe } from "../src/agents/05-scorer.js";
+import { formatarVaga } from "../src/agents/07-alerta.js";
 
 const perfil = {
   pricing: { hora_usd_min: 45, fixo_usd_min: 800 },
@@ -119,6 +120,21 @@ test("scorer v2: red flag do LLM entra como penalidade absoluta", () => {
   const { score } = montarScore(det, 1.0, { equity_ou_revshare: -40 }, pesosPen);
   // (35+25)/(60)*100 = 100; -40 = 60
   assert.equal(score, 60);
+});
+
+test("alerta: sonda ganha marcação visual; item de alerta não", () => {
+  const base = {
+    score: 62, fonte: "himalayas", titulo: "AI Automation Engineer", empresa: "Acme",
+    tipo: "freelance_fixo", budget_usd: null, publicado_em: new Date().toISOString(),
+    llm_analise: { necessidade_real: "x", viabilidade_agentes: "alta" },
+  };
+  const sonda = formatarVaga({ ...base, score_detalhe: { banda: "sonda" } });
+  assert.match(sonda, /🔬/);
+  assert.match(sonda, /SONDA/);
+
+  const alerta = formatarVaga({ ...base, score: 82, score_detalhe: { banda: "alerta" } });
+  assert.match(alerta, /🎯/);
+  assert.doesNotMatch(alerta, /SONDA/);
 });
 
 test("gate: fit abaixo do mínimo é descartado independente de salário", () => {

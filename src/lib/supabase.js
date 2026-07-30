@@ -102,6 +102,20 @@ export async function atualizarScore(id, patch) {
   if (error) throw error;
 }
 
+// Sonda: a vaga de maior score na banda [min, max) ainda 'novo'. Máximo 1.
+export async function candidataSonda(min, max) {
+  const { data, error } = await getClient()
+    .from("vagas")
+    .select("*")
+    .eq("status", "novo")
+    .gte("score", min)
+    .lt("score", max)
+    .order("score", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
 export async function marcarStatus(ids, status) {
   if (!ids.length) return;
   const { error } = await getClient().from("vagas").update({ status }).in("id", ids);
@@ -118,7 +132,7 @@ export async function estatisticasSemana(dias = 7) {
   const desde = new Date(Date.now() - dias * 864e5).toISOString();
   const { data: vagas, error } = await getClient()
     .from("vagas")
-    .select("fonte, score, status, skills, criado_em")
+    .select("fonte, score, status, skills, score_detalhe, criado_em")
     .gte("criado_em", desde);
   if (error) throw error;
   const { data: saude } = await getClient().from("fonte_saude").select("*");
