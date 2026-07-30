@@ -34,7 +34,7 @@ justifiquem uma candidatura manual. Menos que isso = os pesos ou as fontes estã
 
 | Camada | Escolha | Justificativa |
 |---|---|---|
-| Runtime | Node.js 20, ESM | mesmo padrão dos outros pipelines |
+| Runtime | Node.js 22, ESM | supabase-js v2 exige WebSocket global (Node 22+); antes era 20 |
 | Estado | Supabase (Postgres) | histórico, dedupe, analytics |
 | Agendamento | GitHub Actions (cron) | coletores têm I/O longo e parsing de e-mail; mais simples que Workers |
 | LLM barato | DeepSeek (`deepseek-chat`) | classificação e extração em volume, ~10x mais barato |
@@ -352,7 +352,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm' }
+        with: { node-version: '22', cache: 'npm' }
       - run: npm ci
       - run: node src/index.js ${{ github.event.schedule == '0 18 * * 0' && '--digest' || '--ciclo' }}
         env:

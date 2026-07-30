@@ -4,7 +4,7 @@ Radar de oportunidades freelance internacionais com scoring e alerta curado.
 **Especificação completa: [`docs/BRIEF_PROJETO.md`](docs/BRIEF_PROJETO.md) — leia antes de qualquer alteração.**
 
 ## Regras de trabalho
-- Node.js 20, ESM (`import`, não `require`)
+- Node.js 22, ESM (`import`, não `require`) — supabase-js v2 exige `WebSocket` global (Node 22+)
 - Sem framework de agentes. Módulos puros, uma responsabilidade por arquivo
 - Toda função de `normalize()` é pura e tem teste com fixture real em `test/fixtures/`
 - Falha de uma fonte nunca derruba o ciclo: try/catch por fonte + registro em `fonte_saude`
