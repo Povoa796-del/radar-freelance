@@ -97,6 +97,12 @@ export async function todasVagas() {
   return data || [];
 }
 
+export async function buscarVaga(id) {
+  const { data, error } = await getClient().from("vagas").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function atualizarScore(id, patch) {
   const { error } = await getClient().from("vagas").update(patch).eq("id", id);
   if (error) throw error;

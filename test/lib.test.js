@@ -8,6 +8,7 @@ import { montarVaga, urlCanonica, parseSalario } from "../src/lib/vaga.js";
 import { avaliarGate } from "../src/agents/04-gate.js";
 import { componentesDeterministicos, montarScore, trilhaDe } from "../src/agents/05-scorer.js";
 import { formatarVaga } from "../src/agents/07-alerta.js";
+import { decidirCliques } from "../src/callbacks.js";
 
 const perfil = {
   pricing: { hora_usd_min: 45, fixo_usd_min: 800 },
@@ -120,6 +121,28 @@ test("scorer v2: red flag do LLM entra como penalidade absoluta", () => {
   const { score } = montarScore(det, 1.0, { equity_ou_revshare: -40 }, pesosPen);
   // (35+25)/(60)*100 = 100; -40 = 60
   assert.equal(score, 60);
+});
+
+test("callbacks: primeiro clique por vaga vence; repetido/conflito é logado", () => {
+  const upd = (update_id, cbId, data) => ({ update_id, callback_query: { id: cbId, data, message: { chat: { id: 1 }, message_id: update_id } } });
+  const updates = [
+    upd(10, "c1", "int:A"),   // A -> interesse (primeiro)
+    upd(11, "c2", "desc:A"),  // A -> conflito, mantém interesse
+    upd(12, "c3", "int:B"),   // B -> interesse (primeiro)
+    upd(13, "c4", "int:B"),   // B -> repetido, mantém interesse
+    upd(14, "c5", "noop"),    // dado sem status válido
+  ];
+  const { acoes, conflitos, maxId } = decidirCliques(updates);
+
+  const primeiros = acoes.filter((a) => a.tipo === "primeiro");
+  assert.deepEqual(primeiros.map((a) => [a.id, a.status]), [["A", "interesse"], ["B", "interesse"]]);
+  assert.equal(acoes.filter((a) => a.tipo === "repetido").length, 2);
+  assert.equal(acoes.filter((a) => a.tipo === "noop").length, 1);
+  assert.deepEqual(conflitos, [
+    { id: "A", mantido: "interesse", ignorado: "descartado" },
+    { id: "B", mantido: "interesse", ignorado: "interesse" },
+  ]);
+  assert.equal(maxId, 14);
 });
 
 test("alerta: sonda ganha marcação visual; item de alerta não", () => {
