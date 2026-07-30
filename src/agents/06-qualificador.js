@@ -3,6 +3,7 @@
 // e respeita um teto de análises por segurança de custo.
 import { deepseek } from "../lib/llm.js";
 import { componentesDeterministicos, montarScore } from "./05-scorer.js";
+import { decidirIdioma } from "../lib/idioma.js";
 import { log, warn } from "../lib/log.js";
 
 const VIABILIDADE = { alta: 1.0, media: 0.55, baixa: 0.15 };
@@ -25,8 +26,20 @@ Responda APENAS com JSON, sem markdown:
   "justificativa_viabilidade": "1 frase",
   "esforco_horas_estimado": number,
   "risco_principal": "1 frase",
-  "red_flags": ["equity_ou_revshare","teste_nao_pago","escopo_vago","exige_fulltime"]
-}`;
+  "red_flags": ["equity_ou_revshare","teste_nao_pago","escopo_vago","exige_fulltime"],
+  "idioma_modalidade": "escrito|falado|ambos",
+  "tipo_de_necessidade": "producao_em_escala|funcao_individual",
+  "justificativa_necessidade": "1 frase"
+}
+
+Definições:
+- idioma_modalidade: 'falado' se exige falar inglês (entrevista de contratação, calls, daily,
+  suporte ao vivo, native English speaker); 'escrito' se só exige inglês escrito (entrega
+  assíncrona, briefing por texto, sem reunião recorrente); 'ambos' se exige os dois.
+- tipo_de_necessidade: 'producao_em_escala' se a empresa contrata para um PROBLEMA de produção
+  em escala entregável como sistema (conteúdo em volume, automação de processo, pipeline de
+  dados ou de IA — "produzir X em escala usando IA"); 'funcao_individual' se querem uma PESSOA
+  para senioridade/execução (dev, designer, PM, analista), não uma máquina.`;
 }
 
 // Penalidades (SEM budget_ausente — removida na v2): texto + red flags do LLM.
@@ -82,6 +95,15 @@ export async function qualificar(vagas, perfil, pesos, { maxAnalises = 40 } = {}
       const r = await deepseek(montarPrompt(v, perfil), { json: true, temperatura: 0 });
       const vNorm = VIABILIDADE[r.viabilidade_agentes] ?? 0.55;
       const { score, score_detalhe } = montarScore(det, vNorm, penalidades(v, r, perfil, pesos), pesos);
+
+      // Gate por modalidade de idioma (pós-LLM: precisa de idioma_modalidade + score).
+      const idi = decidirIdioma(v, r, score);
+      if (idi.rejeitar) {
+        return { ...v, score, status: "descartado", score_detalhe: { ...score_detalhe, motivo: idi.motivo }, llm_analise: r };
+      }
+      score_detalhe.entrega_ingles = idi.entrega_ingles;
+      score_detalhe.mercado = idi.mercado;
+      score_detalhe.lead_ingles = idi.lead_ingles;
       return { ...v, score, score_detalhe, llm_analise: r, status: "novo" };
     } catch (err) {
       warn(`LLM falhou em "${v.titulo?.slice(0, 40)}": ${err.message}`);

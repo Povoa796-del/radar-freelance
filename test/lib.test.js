@@ -11,6 +11,7 @@ import { formatarVaga } from "../src/agents/07-alerta.js";
 import { decidirCliques } from "../src/callbacks.js";
 import { avaliarGeo } from "../src/lib/geo.js";
 import { ehLead, temaDeServico, gerarPitch } from "../src/lead.js";
+import { decidirIdioma, lusoHispano } from "../src/lib/idioma.js";
 
 const geoAtivo = {
   aceita_presencial: true,
@@ -250,18 +251,43 @@ const leadVaga = {
   descricao: "Build a content pipeline at scale using automation and LLMs.",
   score: 78, fonte: "adzuna", empresa: "Acme", url: "https://x/y", skills: ["automation", "llm"],
   score_detalhe: { trilha: "emprego" },
-  llm_analise: { viabilidade_agentes: "alta", necessidade_real: "Escalar produção de conteúdo", esforco_horas_estimado: 80, risco_principal: "escopo vago" },
+  llm_analise: { viabilidade_agentes: "alta", tipo_de_necessidade: "producao_em_escala", necessidade_real: "Escalar produção de conteúdo", esforco_horas_estimado: 80, risco_principal: "escopo vago" },
 };
 
-test("lead: emprego + viabilidade alta + tema de serviço → é lead", () => {
+test("lead: emprego + tipo_de_necessidade producao_em_escala → é lead", () => {
   assert.equal(ehLead(leadVaga), true);
   assert.ok(temaDeServico(leadVaga.descricao));
 });
 
-test("lead: freelance, viabilidade baixa ou fora de tema → NÃO é lead", () => {
+test("lead: freelance, funcao_individual ou sem classificação → NÃO é lead", () => {
   assert.equal(ehLead({ ...leadVaga, score_detalhe: { trilha: "freelance" } }), false);
-  assert.equal(ehLead({ ...leadVaga, llm_analise: { viabilidade_agentes: "baixa" } }), false);
-  assert.equal(ehLead({ ...leadVaga, titulo: "Accountant", descricao: "bookkeeping and taxes" }), false);
+  assert.equal(ehLead({ ...leadVaga, llm_analise: { tipo_de_necessidade: "funcao_individual" } }), false);
+  assert.equal(ehLead({ ...leadVaga, llm_analise: {} }), false);
+});
+
+test("idioma: luso-hispano passa; anglófono falado rejeita; escrito vira 🔤", () => {
+  const luso = { tipo: "emprego", cliente_meta: { locations: [{ country_code: "ES" }] }, score_detalhe: { trilha: "emprego" } };
+  assert.equal(decidirIdioma(luso, { idioma_modalidade: "falado" }, 80).rejeitar, false);
+
+  const falado = { tipo: "emprego", titulo: "Support Engineer", descricao: "daily calls", score_detalhe: { trilha: "emprego" } };
+  assert.equal(decidirIdioma(falado, { idioma_modalidade: "falado" }, 80).motivo, "ingles_falado");
+
+  const freelanceEscrito = { tipo: "freelance_fixo", titulo: "Technical writer", descricao: "async docs", score_detalhe: { trilha: "freelance" } };
+  const rf = decidirIdioma(freelanceEscrito, { idioma_modalidade: "escrito" }, 80);
+  assert.equal(rf.rejeitar, false);
+  assert.equal(rf.entrega_ingles, true);
+});
+
+test("idioma: emprego anglófono só vira lead 🔤 se producao_em_escala e score≥60", () => {
+  const base = { tipo: "emprego", titulo: "Content Ops", descricao: "scale content with AI", score_detalhe: { trilha: "emprego" } };
+  const lead = decidirIdioma(base, { idioma_modalidade: "escrito", tipo_de_necessidade: "producao_em_escala" }, 72);
+  assert.equal(lead.rejeitar, false);
+  assert.equal(lead.entrega_ingles, true);
+  assert.equal(lead.lead_ingles, true);
+  // funcao_individual → rejeita
+  assert.equal(decidirIdioma(base, { idioma_modalidade: "escrito", tipo_de_necessidade: "funcao_individual" }, 72).motivo, "ingles_falado");
+  // producao_em_escala mas score < 60 → rejeita
+  assert.equal(decidirIdioma(base, { idioma_modalidade: "escrito", tipo_de_necessidade: "producao_em_escala" }, 55).motivo, "ingles_falado");
 });
 
 test("lead: pitch tem necessidade, casos e engajamento", () => {
