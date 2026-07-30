@@ -45,7 +45,7 @@ export function formatarVaga(v) {
   );
   // Linha geográfica só para presencial/híbrido (remoto não tem zona).
   const sd = v.score_detalhe || {};
-  if (sd.zona) linhas.push(`📍 ${esc(sd.local || "")} · ${esc(sd.zona)} ${esc(sd.modalidade || "")}`.trim());
+  if (sd.zona) linhas.push(`📍 ${esc(sd.local || "")} · ${esc(sd.zona)} · ${esc(sd.modalidade || "")}`.trim());
   if (a.necessidade_real) linhas.push("", esc(a.necessidade_real));
   if (a.viabilidade_agentes) {
     linhas.push(`<b>Viabilidade:</b> ${esc(a.viabilidade_agentes)} — ${esc(a.justificativa_viabilidade || "")}`);

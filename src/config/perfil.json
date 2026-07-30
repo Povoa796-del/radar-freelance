@@ -2,14 +2,21 @@
   "posicionamento": "Engenheiro de automação com IA e SEO programático — pipelines multi-agente, geração de conteúdo em escala, sites de alto volume",
   "base": { "pais": "ES", "fuso": "Europe/Madrid", "overlap_max_horas": 4 },
   "geo": {
-    "_nota": "PLACEHOLDER — substitua pelas SUAS zonas. Ative pondo aceita_presencial=true (só depois do digest de domingo).",
-    "aceita_presencial": false,
-    "base": "Vigo",
-    "raio_km": 60,
+    "aceita_presencial": true,
+    "base": "Vigo, Pontevedra, ES",
     "zonas": {
-      "z0": { "label": "Vigo", "cidades": ["Vigo"], "provincias": [] },
-      "z1": { "label": "Rías Baixas / Alto Minho", "cidades": ["Pontevedra", "Redondela", "Vilagarcía", "Viana do Castelo", "Braga", "Valença", "Tui"], "provincias": ["Pontevedra", "Viana do Castelo", "Braga"] },
-      "z2": { "label": "Porto / Ourense", "cidades": ["Porto", "Ourense", "Guimarães"], "provincias": ["Porto", "Ourense"] }
+      "z0_diario": {
+        "cidades": ["Vigo", "Pontevedra", "Redondela", "O Porriño", "Mos", "Tui", "Salvaterra de Miño", "Ponteareas", "Nigrán", "Baiona", "Monção", "Valença"],
+        "provincias": []
+      },
+      "z1_hibrido": {
+        "cidades": ["Santiago de Compostela", "Ourense", "Melgaço", "Arcos de Valdevez", "Ponte de Lima", "Viana do Castelo", "Braga", "Guimarães", "Barcelos"],
+        "provincias": ["Pontevedra", "Viana do Castelo"]
+      },
+      "z2_pontual": {
+        "cidades": ["Porto", "Vila Nova de Gaia", "Matosinhos", "A Coruña", "Aveiro", "Lugo"],
+        "provincias": ["Braga", "Porto", "A Coruña", "Ourense"]
+      }
     }
   },
   "idiomas": ["pt", "es", "en"],

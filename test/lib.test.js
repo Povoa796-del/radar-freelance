@@ -240,8 +240,8 @@ test("gate geo: ativo → em zona passa; fora de zona = fora_de_zona; remoto pas
 
 test("alerta: linha 📍 só aparece para presencial/híbrido com zona", () => {
   const base = { score: 78, fonte: "adzuna", titulo: "AI Engineer", empresa: "X", tipo: "emprego", budget_usd: 90000, publicado_em: new Date().toISOString(), llm_analise: { viabilidade_agentes: "alta" } };
-  const pres = formatarVaga({ ...base, score_detalhe: { zona: "z1", local: "Braga", modalidade: "híbrido" } });
-  assert.match(pres, /📍 Braga · z1 híbrido/);
+  const pres = formatarVaga({ ...base, score_detalhe: { zona: "z1_hibrido", local: "Braga", modalidade: "híbrido" } });
+  assert.match(pres, /📍 Braga · z1_hibrido · híbrido/);
   const remota = formatarVaga({ ...base, score_detalhe: { zona: null, modalidade: "remoto" } });
   assert.doesNotMatch(remota, /📍/);
 });
