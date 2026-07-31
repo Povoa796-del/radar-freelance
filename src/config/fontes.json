@@ -24,6 +24,8 @@
     "jobicy": { "enabled": true, "rateLimitMs": 1000, "count": 50, "industries": ["dev", "data-science", "marketing"] },
     "arbeitnow": { "enabled": true, "rateLimitMs": 1000 },
     "hn-whoishiring": { "enabled": true, "rateLimitMs": 500 },
-    "landing-jobs": { "enabled": true, "rateLimitMs": 1000, "limit": 50 }
+    "landing-jobs": { "enabled": true, "rateLimitMs": 1000, "limit": 50 },
+    "adzuna": { "enabled": false, "rateLimitMs": 1200, "pais": "es", "where": "Vigo", "distance": 60, "results": 50 },
+    "jooble": { "enabled": false, "rateLimitMs": 1000, "cidades": ["Vigo", "Pontevedra", "Braga", "Porto", "Viana do Castelo"], "keywords": "automation OR content OR developer OR IA" }
   }
 }

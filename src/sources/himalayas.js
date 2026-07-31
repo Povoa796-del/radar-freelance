@@ -4,6 +4,18 @@ import { montarVaga, stripHtml, inferirTipo } from "../lib/vaga.js";
 
 const API = "https://himalayas.app/jobs/api";
 
+// O himalayas às vezes devolve companyName como placeholder ('name', 'company'...).
+// O nome confiável está no slug (ex: /companies/veracity-insurance/).
+const EMPRESA_PLACEHOLDER = new Set(["name", "company", "title", "companyname", ""]);
+
+function empresaHimalayas(raw) {
+  const nome = String(raw.companyName || "").trim();
+  if (nome && !EMPRESA_PLACEHOLDER.has(nome.toLowerCase())) return nome;
+  const slug = raw.companySlug || (String(raw.applicationLink || "").match(/\/companies\/([^/]+)\//)?.[1] || "");
+  if (slug) return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return null;
+}
+
 async function fetch(ctx = {}) {
   const cfg = ctx.config || {};
   const maxPaginas = cfg.max_paginas ?? 3;
@@ -29,7 +41,7 @@ function normalize(raw) {
     fonte_id: raw.guid,
     url: raw.applicationLink || `https://himalayas.app/companies/${raw.companySlug}/jobs`,
     titulo: raw.title,
-    empresa: raw.companyName,
+    empresa: empresaHimalayas(raw),
     descricao: stripHtml(raw.description || raw.excerpt),
     skills: cats,
     tipo: inferirTipo(raw.employmentType, raw.salaryPeriod, raw.title),

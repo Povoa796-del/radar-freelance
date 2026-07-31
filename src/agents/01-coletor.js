@@ -7,6 +7,8 @@ import jobicy from "../sources/jobicy.js";
 import arbeitnow from "../sources/arbeitnow.js";
 import hn from "../sources/hn-whoishiring.js";
 import landingJobs from "../sources/landing-jobs.js";
+import adzuna from "../sources/adzuna.js";
+import jooble from "../sources/jooble.js";
 import { registrarSaudeFonte } from "../lib/supabase.js";
 import { log, warn } from "../lib/log.js";
 
@@ -18,6 +20,8 @@ export const ADAPTERS = {
   arbeitnow,
   "hn-whoishiring": hn,
   "landing-jobs": landingJobs,
+  adzuna,
+  jooble,
 };
 
 export async function coletar({ fontesCfg = {}, keywords = [], since = new Date(0) } = {}) {

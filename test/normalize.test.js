@@ -40,6 +40,17 @@ test("himalayas.normalize", () => {
   assert.ok(v.empresa, "himalayas deveria trazer empresa");
 });
 
+test("himalayas.normalize: empresa cai no slug quando companyName é placeholder", () => {
+  const raw = fixture("himalayas");
+  // nome real preservado quando válido
+  assert.equal(himalayas.normalize(raw).empresa, raw.companyName);
+  // placeholder 'name' → de-slug do companySlug, nunca 'name'
+  const bugado = himalayas.normalize({ ...raw, companyName: "name" });
+  const esperado = raw.companySlug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  assert.equal(bugado.empresa, esperado);
+  assert.notEqual(bugado.empresa, "name");
+});
+
 test("remoteok.normalize", () => {
   const v = remoteok.normalize(fixture("remoteok"));
   checarInvariantes(v, "remoteok");
