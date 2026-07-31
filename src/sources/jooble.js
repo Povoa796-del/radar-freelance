@@ -1,7 +1,7 @@
 // Jooble — única via para o Alto Minho português (Adzuna não cobre PT).
-// enabled:false até a chave chegar. Lê JOOBLE_KEY do env. POST por cidade-alvo.
-// NOTA: normalize baseado no schema documentado do Jooble; capturar fixture real e validar
-// com a chave ANTES de habilitar (regra: fixture real antes do normalize).
+// Lê JOOBLE_KEY do env. POST por cidade-alvo. Fixture real capturado (test/fixtures/jooble.json).
+// NOTA: o filtro de localização do Jooble é frouxo (pode voltar vaga fora da zona);
+// o gate 'fora_de_zona' cobre isso.
 import { postJSON, dorme } from "../lib/http.js";
 import { montarVaga, stripHtml, inferirTipo, parseSalario } from "../lib/vaga.js";
 

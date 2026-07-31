@@ -13,6 +13,8 @@ import jobicy from "../src/sources/jobicy.js";
 import arbeitnow from "../src/sources/arbeitnow.js";
 import hn from "../src/sources/hn-whoishiring.js";
 import landingJobs from "../src/sources/landing-jobs.js";
+import adzuna from "../src/sources/adzuna.js";
+import jooble from "../src/sources/jooble.js";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const fixture = (nome) => JSON.parse(readFileSync(join(DIR, "fixtures", `${nome}.json`), "utf8"));
@@ -87,6 +89,17 @@ test("landing-jobs.normalize", () => {
   assert.equal(v.moeda, "EUR");
   assert.ok(v.empresa, "empresa deveria vir do slug da URL");
   assert.ok(v.cliente_meta.location, "location deveria ser preenchida");
+});
+
+test("adzuna.normalize", () => {
+  const v = adzuna.normalize(fixture("adzuna"));
+  checarInvariantes(v, "adzuna");
+  assert.ok(v.cliente_meta.location, "adzuna deveria trazer localização");
+});
+
+test("jooble.normalize", () => {
+  const v = jooble.normalize(fixture("jooble"));
+  checarInvariantes(v, "jooble");
 });
 
 test("normalize é determinístico (mesmo input -> mesmo hash)", () => {

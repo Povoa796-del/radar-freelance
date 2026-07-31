@@ -1,7 +1,5 @@
 // Adzuna — cobre o lado espanhol (presencial perto de Vigo). API grátis (app_id + app_key).
-// enabled:false até as chaves chegarem. Lê ADZUNA_APP_ID / ADZUNA_APP_KEY do env.
-// NOTA: normalize baseado no schema documentado do Adzuna; capturar fixture real e validar
-// com a chave ANTES de habilitar (regra: fixture real antes do normalize).
+// Lê ADZUNA_APP_ID / ADZUNA_APP_KEY do env. Fixture real capturado (test/fixtures/adzuna.json).
 import { getJSON, dorme } from "../lib/http.js";
 import { montarVaga, stripHtml, inferirTipo } from "../lib/vaga.js";
 
