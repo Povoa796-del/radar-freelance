@@ -97,6 +97,28 @@ export async function todasVagas() {
   return data || [];
 }
 
+// Fase 2 — e-mails já processados (dedupe por message_id).
+export async function emailJaProcessado(messageId) {
+  if (!messageId) return false;
+  const { data, error } = await getClient()
+    .from("emails_processados")
+    .select("message_id")
+    .eq("message_id", messageId)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function registrarEmailProcessado({ messageId, remetente, assunto }, vagasExtraidas = 0) {
+  const { error } = await getClient()
+    .from("emails_processados")
+    .upsert(
+      { message_id: messageId, remetente, assunto, vagas_extraidas: vagasExtraidas },
+      { onConflict: "message_id" }
+    );
+  if (error) throw error;
+}
+
 export async function buscarVaga(id) {
   const { data, error } = await getClient().from("vagas").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
