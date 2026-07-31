@@ -57,6 +57,13 @@ test("vaga: url canônica remove tracking", () => {
   assert.ok(u.includes("id=9"));
 });
 
+test("vaga: skills não-array não quebra (coage para array)", () => {
+  const v = montarVaga({ fonte: "t", fonte_id: "1", url: "https://x.com/1", titulo: "T", skills: "solo" });
+  assert.deepEqual(v.skills, ["solo"]);
+  const v2 = montarVaga({ fonte: "t", fonte_id: "2", url: "https://x.com/2", titulo: "T", skills: { a: 1 } });
+  assert.ok(Array.isArray(v2.skills));
+});
+
 test("vaga: parseSalario", () => {
   const s = parseSalario("$50k - $80k");
   assert.equal(s.min, 50000);

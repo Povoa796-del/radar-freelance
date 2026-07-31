@@ -121,7 +121,7 @@ export function montarVaga(campos) {
     titulo: String(titulo || "").trim(),
     empresa: empresa ? String(empresa).trim() : null,
     descricao: descricao ? String(descricao).trim() : null,
-    skills: (skills || []).filter(Boolean).map((s) => String(s).trim()),
+    skills: (Array.isArray(skills) ? skills : skills ? [skills] : []).filter(Boolean).map((s) => String(s).trim()),
     tipo,
     budget_min: budget_min != null ? Number(budget_min) : null,
     budget_max: budget_max != null ? Number(budget_max) : null,
