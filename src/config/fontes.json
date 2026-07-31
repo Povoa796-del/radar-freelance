@@ -27,6 +27,6 @@
     "landing-jobs": { "enabled": true, "rateLimitMs": 1000, "limit": 50 },
     "adzuna": { "enabled": true, "rateLimitMs": 1200, "pais": "es", "where": "Vigo", "distance": 60, "results": 50 },
     "jooble": { "enabled": true, "rateLimitMs": 1000, "cidades": ["Vigo, España", "Pontevedra, España", "Braga, Portugal", "Porto, Portugal", "Viana do Castelo, Portugal"], "keywords": "automation OR content OR developer OR IA" },
-    "gmail-alerts": { "enabled": false, "label": "radar", "limite": 50 }
+    "gmail-alerts": { "enabled": true, "label": "radar", "limite": 50 }
   }
 }

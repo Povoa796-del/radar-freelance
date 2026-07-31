@@ -24,8 +24,16 @@ export async function lerNaoLidas(label = "radar", { limite = 50 } = {}) {
   const mensagens = [];
   await client.connect();
   try {
-    // No Gmail, cada label é uma "mailbox". Abre a label alvo.
-    const lock = await client.getMailboxLock(label);
+    // No Gmail, cada label é uma "mailbox" e o nome é case-sensitive ("Radar" ≠ "radar").
+    // Resolve o path real casando a label sem diferenciar caixa.
+    const boxes = await client.list();
+    const box = boxes.find(
+      (b) => b.path.toLowerCase() === label.toLowerCase() || b.name.toLowerCase() === label.toLowerCase()
+    );
+    if (!box) {
+      throw new Error(`Label '${label}' não encontrada. Disponíveis: ${boxes.map((b) => b.path).join(", ")}`);
+    }
+    const lock = await client.getMailboxLock(box.path);
     try {
       const uids = await client.search({ seen: false }, { uid: true });
       for (const uid of (uids || []).slice(0, limite)) {
