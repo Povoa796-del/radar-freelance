@@ -5,14 +5,13 @@
 //   { origem, titulo, url, empresa?, descricao?, budget_min?, budget_max?,
 //     moeda?, local?, publicado_em?, tipo?, remoto?, skills? }
 //
-// Parsers entram AQUI conforme o HTML real de cada remetente chega em
-// test/fixtures/ (ver regra CRÍTICA do Bloco 2). Vazio = todo e-mail cai em
-// "remetente sem parser" e é descartado silenciosamente (com contagem).
-export const PARSERS = [
-  // import upwork from "./upwork.js";  { nome: "upwork", teste: (r) => /upwork\.com/i.test(r), parse: upwork },
-  // import linkedin from "./linkedin.js";
-  // import workana from "./workana.js";
-];
+// Estes são INICIAIS/tolerantes (por padrão de URL, ver _generico.js). Quando o HTML
+// real de cada remetente chegar em test/fixtures/, refinar para extrair budget/empresa/etc.
+import upwork from "./upwork.js";
+import linkedin from "./linkedin.js";
+import workana from "./workana.js";
+
+export const PARSERS = [upwork, linkedin, workana];
 
 export function parserPara(remetente) {
   return PARSERS.find((p) => p.teste(remetente)) || null;

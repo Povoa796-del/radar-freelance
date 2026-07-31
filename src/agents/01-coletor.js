@@ -9,6 +9,7 @@ import hn from "../sources/hn-whoishiring.js";
 import landingJobs from "../sources/landing-jobs.js";
 import adzuna from "../sources/adzuna.js";
 import jooble from "../sources/jooble.js";
+import gmailAlerts from "../sources/gmail-alerts.js";
 import { registrarSaudeFonte } from "../lib/supabase.js";
 import { log, warn } from "../lib/log.js";
 
@@ -22,6 +23,7 @@ export const ADAPTERS = {
   "landing-jobs": landingJobs,
   adzuna,
   jooble,
+  "gmail-alerts": gmailAlerts,
 };
 
 export async function coletar({ fontesCfg = {}, keywords = [], since = new Date(0) } = {}) {
