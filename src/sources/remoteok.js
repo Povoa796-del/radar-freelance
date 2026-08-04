@@ -4,6 +4,13 @@ import { montarVaga, stripHtml, inferirTipo } from "../lib/vaga.js";
 
 const API = "https://remoteok.com/api";
 
+// O RemoteOK anexa um boilerplate anti-spam a toda descrição ("Please mention the word
+// X ... when applying ...") — ruído que polui o LLM, é tentativa de injeção, e falseia
+// a detecção de estrutura de posting. Remove.
+function limparBoilerplate(texto) {
+  return String(texto || "").replace(/\s*please mention the word[\s\S]*$/i, "").trim();
+}
+
 async function fetch() {
   const data = await getJSON(API);
   if (!Array.isArray(data)) return [];
@@ -19,7 +26,7 @@ function normalize(raw) {
     url: raw.url || `https://remoteok.com/remote-jobs/${raw.slug}`,
     titulo: raw.position,
     empresa: raw.company,
-    descricao: stripHtml(raw.description),
+    descricao: limparBoilerplate(stripHtml(raw.description)),
     skills: tags,
     tipo: inferirTipo(tags.join(" "), null, raw.position),
     budget_min: raw.salary_min || null,

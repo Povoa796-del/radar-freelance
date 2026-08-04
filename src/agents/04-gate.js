@@ -3,6 +3,7 @@
 import { log } from "../lib/log.js";
 import { fitSkill } from "../lib/fit.js";
 import { avaliarGeo } from "../lib/geo.js";
+import { pareceNaoVaga } from "../lib/validacao.js";
 
 const RE_OVERLAP_DURO = /(overlap|work).{0,30}(full[- ]?day|8\s*hours|6\s*hours|7\s*hours)|must overlap.{0,30}(pst|pacific|est|eastern)/i;
 const RE_IDIOMA_OUTRO = /\bfluent\s+(?:in\s+)?(german|french|dutch|italian|japanese|mandarin|chinese|korean|arabic|russian|polish)\b/i;
@@ -21,6 +22,11 @@ export function avaliarGate(vaga, perfil, gateCfg) {
   const moedas = gateCfg.moedas_aceitas || ["USD", "EUR", "GBP", "CHF"];
   const maxDias = gateCfg.max_dias_publicado ?? 7;
   const fitMin = gateCfg.fit_minimo ?? 0.45;
+
+  // Não é vaga? Página institucional/marketing raspada como posting — descarta antes do LLM.
+  if (pareceNaoVaga(vaga)) {
+    return { ok: false, motivo: "nao_vaga" };
+  }
 
   // Fit mínimo obrigatório: descarta fora do nicho, independente de ticket/salário.
   const fit = fitSkill(vaga, perfil);

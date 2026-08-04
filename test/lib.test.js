@@ -12,6 +12,7 @@ import { decidirCliques } from "../src/callbacks.js";
 import { avaliarGeo } from "../src/lib/geo.js";
 import { ehLead, temaDeServico, gerarPitch } from "../src/lead.js";
 import { decidirIdioma, lusoHispano } from "../src/lib/idioma.js";
+import { pareceNaoVaga } from "../src/lib/validacao.js";
 
 const geoAtivo = {
   aceita_presencial: true,
@@ -304,6 +305,30 @@ test("lead: pitch tem necessidade, casos e engajamento", () => {
   assert.match(md, /Escalar produção de conteúdo/);
   assert.match(md, /Engajamento sugerido/);
   assert.match(md, /US\$ 800/);
+});
+
+test("validacao: página de marketing sem estrutura de posting = não-vaga", () => {
+  const naoVaga = {
+    titulo: "AGC Studio",
+    descricao: "Our AI-powered platform is an all-in-one tool. Unlike generic solutions, the platform generates content at scale. Start your free trial today.",
+  };
+  assert.equal(pareceNaoVaga(naoVaga), true);
+
+  const vagaReal = {
+    titulo: "Senior Engineer",
+    descricao: "We are looking for an engineer. Key responsibilities: build the AI-powered platform. Requirements: 5 years of experience. How to apply: send your CV.",
+  };
+  assert.equal(pareceNaoVaga(vagaReal), false); // tem estrutura de posting
+
+  // vaga esparsa (HN) sem marketing NÃO é falso-positivo
+  assert.equal(pareceNaoVaga({ titulo: "Node dev", descricao: "Build a scraper for us." }), false);
+});
+
+test("gate: descarta não-vaga com motivo 'nao_vaga'", () => {
+  const naoVaga = vagaBase({ titulo: "Jasper", descricao: "Our AI-powered platform. Unlike generic tools. Free trial. Terms of service." });
+  const r = avaliarGate(naoVaga, perfil, gateCfg);
+  assert.equal(r.ok, false);
+  assert.equal(r.motivo, "nao_vaga");
 });
 
 test("gate: fit abaixo do mínimo é descartado independente de salário", () => {

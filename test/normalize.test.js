@@ -59,6 +59,14 @@ test("remoteok.normalize", () => {
   assert.equal(v.moeda, "USD");
 });
 
+test("remoteok.normalize: remove o boilerplate anti-spam da descrição", () => {
+  const raw = { id: 9, position: "Node Dev", company: "Acme", url: "https://remoteok.com/remote-jobs/x-9",
+    description: "Build a scraper.\n\nPlease mention the word **SWANKY** and tag ABC when applying to show you read the job post.", tags: [] };
+  const v = remoteok.normalize(raw);
+  assert.doesNotMatch(v.descricao, /please mention the word/i);
+  assert.match(v.descricao, /build a scraper/i);
+});
+
 test("remotive.normalize", () => {
   const v = remotive.normalize(fixture("remotive"));
   checarInvariantes(v, "remotive");
