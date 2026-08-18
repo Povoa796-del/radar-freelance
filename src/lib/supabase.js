@@ -155,6 +155,49 @@ export async function registrarAlerta(vagaIds, canal = "telegram") {
   if (error) throw error;
 }
 
+// --- Radar Local Vigo (tabela vagas_local, fluxo separado) ---
+const COLUNAS_LOCAL = [
+  "fonte", "fonte_id", "url", "titulo", "empresa", "descricao", "local", "zona",
+  "distancia_km", "tipo_contrato", "jornada", "salario", "experiencia",
+  "publicado_em", "hash", "fingerprint", "score", "score_detalhe", "status",
+];
+
+export async function inserirVagasLocal(vagas) {
+  if (!vagas.length) return [];
+  const linhas = vagas.map((v) => {
+    const r = {};
+    for (const c of COLUNAS_LOCAL) if (v[c] !== undefined) r[c] = v[c];
+    return r;
+  });
+  const { data, error } = await getClient()
+    .from("vagas_local")
+    .upsert(linhas, { onConflict: "fonte,fonte_id", ignoreDuplicates: true })
+    .select();
+  if (error) throw error;
+  return data || [];
+}
+
+export async function hashesLocalRecentes(dias = 30) {
+  const desde = new Date(Date.now() - dias * 864e5).toISOString();
+  const { data, error } = await getClient().from("vagas_local").select("hash").gte("criado_em", desde);
+  if (error) throw error;
+  return new Set((data || []).map((r) => r.hash));
+}
+
+export async function candidatasLocal(scoreMin, scoreMax, limite) {
+  let q = getClient().from("vagas_local").select("*").eq("status", "novo").gte("score", scoreMin);
+  if (scoreMax != null) q = q.lt("score", scoreMax);
+  const { data, error } = await q.order("score", { ascending: false }).limit(limite);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function marcarStatusLocal(ids, status) {
+  if (!ids.length) return;
+  const { error } = await getClient().from("vagas_local").update({ status }).in("id", ids);
+  if (error) throw error;
+}
+
 // Estatísticas para o digest semanal.
 export async function estatisticasSemana(dias = 7) {
   const desde = new Date(Date.now() - dias * 864e5).toISOString();

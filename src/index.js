@@ -15,6 +15,7 @@ import { inserirVagas } from "./lib/supabase.js";
 import { gerarDigest } from "./digest.js";
 import { processarCallbacks } from "./callbacks.js";
 import { repontuar } from "./rescore.js";
+import { rodarLocal } from "./local.js";
 import { log, erro } from "./lib/log.js";
 
 // Carrega .env em dev; em CI as variáveis já vêm do ambiente (secrets).
@@ -74,8 +75,10 @@ async function main() {
     await repontuar();
   } else if (modo === "--callbacks") {
     await processarCallbacks();
+  } else if (modo === "--local") {
+    await rodarLocal();
   } else {
-    console.log("Uso: node src/index.js --ciclo | --digest | --rescore | --callbacks");
+    console.log("Uso: node src/index.js --ciclo | --digest | --rescore | --callbacks | --local");
     process.exit(1);
   }
 }

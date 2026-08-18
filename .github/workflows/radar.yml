@@ -28,6 +28,17 @@ jobs:
           JOOBLE_KEY: ${{ secrets.JOOBLE_KEY }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+      # Radar Local Vigo (fluxo separado) — roda junto do ciclo remoto, não no digest.
+      - name: radar local
+        if: github.event.schedule != '0 18 * * 0'
+        run: node src/index.js --local
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       # O digest gera reports/*.md; comita de volta no repo.
       - name: commit do digest
         if: github.event.schedule == '0 18 * * 0'

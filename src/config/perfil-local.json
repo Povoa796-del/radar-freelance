@@ -1,0 +1,32 @@
+{
+  "_nota": "Perfil do Radar Local Vigo — presencial, caixa a curto prazo. Independente do perfil.json remoto.",
+  "base": "Vigo, Pontevedra, ES",
+  "tem_veiculo": false,
+  "zonas": {
+    "z0": ["Vigo", "O Porriño", "Porriño", "Redondela", "Tui", "Nigrán", "Gondomar", "Mos", "Monção", "Valença"],
+    "z1": ["Pontevedra", "Santiago", "Santiago de Compostela", "Viana do Castelo", "Braga"]
+  },
+  "distancia_km": {
+    "Vigo": 0, "O Porriño": 15, "Porriño": 15, "Redondela": 12, "Tui": 25, "Nigrán": 18,
+    "Gondomar": 15, "Mos": 12, "Monção": 35, "Valença": 30,
+    "Pontevedra": 30, "Santiago": 90, "Santiago de Compostela": 90, "Viana do Castelo": 50, "Braga": 100
+  },
+  "pesos": {
+    "z0": 40,
+    "z1": 20,
+    "sem_experiencia": 30,
+    "portugues_valor": 25,
+    "area_formacao": 20,
+    "incorporacion_inmediata": 15,
+    "formacao_universitaria": 10,
+    "exige_experiencia": -40,
+    "carnet_vehiculo": -15,
+    "idioma_faltante": -20,
+    "comissao_100": -30
+  },
+  "termos": [
+    "comercio exterior", "aduanas", "transitaria", "logistica", "almacen",
+    "mozo de almacen", "administrativo", "atencion al cliente", "exportacion", "importacion"
+  ],
+  "alerta": { "corte": 60, "sonda_min": 40 }
+}
