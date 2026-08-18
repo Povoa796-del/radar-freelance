@@ -1,13 +1,26 @@
 name: radar
 on:
   schedule:
-    - cron: '0 7,16 * * *'   # 09:00 e 18:00 CET (ciclo)
-    - cron: '0 18 * * 0'     # domingo 20:00 CET (digest semanal)
+    - cron: '0 7,19 * * *'   # 09:00 e 21:00 CET — ciclo remoto + local (2x/dia)
+    - cron: '0 1,13 * * *'   # 03:00 e 15:00 CET — só local (completa 4x/dia: 1,7,13,19)
+    - cron: '0 18 * * 0'     # domingo 20:00 CET — digest semanal
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+      ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+      JOOBLE_KEY: ${{ secrets.JOOBLE_KEY }}
+      GMAIL_USER: ${{ secrets.GMAIL_USER }}
+      GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,30 +28,22 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
-      - run: node src/index.js ${{ github.event.schedule == '0 18 * * 0' && '--digest' || '--ciclo' }}
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
-          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
-          JOOBLE_KEY: ${{ secrets.JOOBLE_KEY }}
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-      # Radar Local Vigo (fluxo separado) — roda junto do ciclo remoto, não no digest.
-      - name: radar local
-        if: github.event.schedule != '0 18 * * 0'
+
+      # Digest semanal (domingo).
+      - name: digest
+        if: github.event.schedule == '0 18 * * 0'
+        run: node src/index.js --digest
+
+      # Radar remoto/tech — 2x/dia (07 e 19 UTC) + disparo manual.
+      - name: radar remoto (ciclo)
+        if: github.event.schedule == '0 7,19 * * *' || github.event_name == 'workflow_dispatch'
+        run: node src/index.js --ciclo
+
+      # Radar Local Vigo — 4x/dia (01, 07, 13, 19 UTC) + disparo manual. Fluxo separado.
+      - name: radar local (vigo)
+        if: github.event.schedule == '0 7,19 * * *' || github.event.schedule == '0 1,13 * * *' || github.event_name == 'workflow_dispatch'
         run: node src/index.js --local
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
-          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
       # O digest gera reports/*.md; comita de volta no repo.
       - name: commit do digest
         if: github.event.schedule == '0 18 * * 0'

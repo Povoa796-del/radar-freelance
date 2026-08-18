@@ -39,8 +39,8 @@ test("score-local: 100% comisión + idioma faltante é negativo", () => {
   assert.equal(r.zona, "fora");
 });
 
-test("score-local: carnet penaliza só quando não tem veículo", () => {
+test("score-local: veículo exigido é bônus com carro, penalidade sem", () => {
   const vaga = { titulo: "Repartidor", empresa: "A", local: "Vigo", descricao: "Carnet de conducir y vehículo propio." };
-  assert.equal(pontuarLocal(vaga, perfil).score_detalhe.componentes.carnet_vehiculo, -15);
-  assert.equal(pontuarLocal(vaga, { ...perfil, tem_veiculo: true }).score_detalhe.componentes.carnet_vehiculo, undefined);
+  assert.equal(pontuarLocal(vaga, perfil).score_detalhe.componentes.carnet_vehiculo, 10); // tem_veiculo:true
+  assert.equal(pontuarLocal(vaga, { ...perfil, tem_veiculo: false }).score_detalhe.componentes.carnet_vehiculo, -15);
 });

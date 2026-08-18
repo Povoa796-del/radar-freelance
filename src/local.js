@@ -110,8 +110,16 @@ export async function rodarLocal() {
   const novas = [...porHash.values()].filter((v) => !conhecidos.has(v.hash));
   log(`local dedupe: ${brutos.length} → ${novas.length} novas`);
 
+  // Frescor: vaga operacional local com 30+ dias está morta. Só as recentes.
+  const maxDias = perfil.frescor_dias ?? 7;
+  const frescas = novas.filter((v) => {
+    if (!v.publicado_em) return false; // sem data → não confirma frescor
+    return (Date.now() - new Date(v.publicado_em).getTime()) / 864e5 <= maxDias;
+  });
+  log(`local frescor: ${frescas.length} com ≤ ${maxDias} dias (de ${novas.length})`);
+
   // Score local + mantém só as com sinal (≥ sonda_min).
-  const pontuadas = novas
+  const pontuadas = frescas
     .map((v) => ({ ...v, ...pontuarLocal(v, perfil) }))
     .filter((v) => v.score >= perfil.alerta.sonda_min);
   log(`local score: ${pontuadas.length} com score ≥ ${perfil.alerta.sonda_min}`);

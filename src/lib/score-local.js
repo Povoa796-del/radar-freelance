@@ -52,7 +52,9 @@ export function pontuarLocal(vaga, perfil) {
   if (RE_AREA.test(texto)) comp.area_formacao = p.area_formacao;
   if (RE_INMEDIATA.test(texto)) comp.incorporacion_inmediata = p.incorporacion_inmediata;
   if (RE_UNIVERSITARIA.test(texto)) comp.formacao_universitaria = p.formacao_universitaria;
-  if (RE_CARNET.test(texto) && !perfil.tem_veiculo) comp.carnet_vehiculo = p.carnet_vehiculo;
+  // Veículo próprio: se tenho carro, exigi-lo é BÔNUS (filtra concorrência sem carro);
+  // se não tenho, é penalidade.
+  if (RE_CARNET.test(texto)) comp.carnet_vehiculo = perfil.tem_veiculo ? (p.carnet_bonus ?? 10) : p.carnet_vehiculo;
   if (RE_IDIOMA_FALTANTE.test(texto)) comp.idioma_faltante = p.idioma_faltante;
   if (RE_COMISSAO.test(texto)) comp.comissao_100 = p.comissao_100;
 
