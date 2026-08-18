@@ -6,9 +6,23 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pontuarLocal } from "../src/lib/score-local.js";
+import adzunaLocal from "../src/sources/adzuna-local.js";
+import joobleLocal from "../src/sources/jooble-local.js";
 
 const RAIZ = dirname(dirname(fileURLToPath(import.meta.url)));
 const perfil = JSON.parse(readFileSync(join(RAIZ, "src/config/perfil-local.json"), "utf8"));
+const fx = (n) => JSON.parse(readFileSync(join(RAIZ, "test/fixtures", `${n}.json`), "utf8"));
+
+test("adapters locais: normalize produz local-vaga válida (fixtures reais)", () => {
+  const a = adzunaLocal.normalize(fx("adzuna"));
+  assert.equal(a.fonte, "adzuna-local");
+  assert.match(a.hash, /^[0-9a-f]{64}$/);
+  assert.ok("local" in a && "tipo_contrato" in a);
+
+  const j = joobleLocal.normalize(fx("jooble"));
+  assert.equal(j.fonte, "jooble-local");
+  assert.ok(j.titulo && j.url && j.hash);
+});
 
 test("score-local: mozo sin experiencia em z0 pontua alto", () => {
   const r = pontuarLocal(

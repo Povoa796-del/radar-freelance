@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import adzunaLocal from "./sources/adzuna-local.js";
+import joobleLocal from "./sources/jooble-local.js";
 import { pontuarLocal } from "./lib/score-local.js";
 import {
   inserirVagasLocal,
@@ -19,7 +20,7 @@ import { log, warn } from "./lib/log.js";
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const perfil = JSON.parse(readFileSync(join(RAIZ, "src/config/perfil-local.json"), "utf8"));
 
-const FONTES = [adzunaLocal];
+const FONTES = [adzunaLocal, joobleLocal];
 
 function idade(iso) {
   if (!iso) return "";
@@ -54,7 +55,7 @@ async function coletar() {
   const brutos = [];
   for (const fonte of FONTES) {
     try {
-      const raws = await fonte.fetch({ where: "Vigo", distance: 50, pais: "es", termos: perfil.termos });
+      const raws = await fonte.fetch({ where: "Vigo", distance: 50, pais: "es", termos: perfil.termos, cidades: perfil.cidades_jooble });
       log(`local ${fonte.name}: ${raws.length} brutos`);
       for (const r of raws) {
         try {

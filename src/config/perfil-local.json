@@ -30,5 +30,6 @@
     "comercio exterior", "aduanas", "transitaria", "logistica", "almacen",
     "mozo de almacen", "administrativo", "atencion al cliente", "exportacion", "importacion"
   ],
+  "cidades_jooble": ["Vigo", "Pontevedra", "O Porriño", "Redondela", "Braga", "Viana do Castelo"],
   "alerta": { "corte": 60, "sonda_min": 40 }
 }
