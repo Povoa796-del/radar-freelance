@@ -9,7 +9,14 @@ import { log, warn } from "../lib/log.js";
 const VIABILIDADE = { alta: 1.0, media: 0.55, baixa: 0.15 };
 
 function perfilResumido(perfil) {
-  return `${perfil.posicionamento}. Stacks fortes: ${(perfil.stacks_core || []).join(", ")}. Aceitáveis: ${(perfil.stacks_aceitaveis || []).join(", ")}.`;
+  const col = perfil.colaborador;
+  const colTxt = col
+    ? ` Trabalha com um colaborador técnico (recurso interno, não sócio — você é o ponto de` +
+      ` contato e o arquiteto) que cobre: ${col.stacks.join("; ")}. Considere a CAPACIDADE` +
+      ` COMBINADA dos dois na viabilidade, sem assumir que qualquer um dos dois executa` +
+      ` pessoalmente toda a stack do outro.`
+    : "";
+  return `${perfil.posicionamento}. Stacks fortes: ${(perfil.stacks_core || []).join(", ")}. Aceitáveis: ${(perfil.stacks_aceitaveis || []).join(", ")}.${colTxt}`;
 }
 
 function montarPrompt(vaga, perfil) {
@@ -28,6 +35,7 @@ Responda APENAS com JSON, sem markdown:
   "risco_principal": "1 frase",
   "red_flags": ["equity_ou_revshare","teste_nao_pago","escopo_vago","exige_fulltime"],
   "idioma_modalidade": "escrito|falado|ambos",
+  "interlocutor_falado": "cliente|interno|nenhum",
   "tipo_de_necessidade": "producao_em_escala|funcao_individual",
   "justificativa_necessidade": "1 frase"
 }
@@ -36,14 +44,21 @@ Definições:
 - idioma_modalidade: 'falado' se exige falar inglês (entrevista de contratação, calls, daily,
   suporte ao vivo, native English speaker); 'escrito' se só exige inglês escrito (entrega
   assíncrona, briefing por texto, sem reunião recorrente); 'ambos' se exige os dois.
+- interlocutor_falado: só relevante se idioma_modalidade for 'falado' ou 'ambos'. 'cliente' se
+  a fala é COM O CLIENTE FINAL (account management, liderar calls com cliente, treinamento ou
+  mentoria ao vivo, apresentação para cliente — falar inglês é parte do produto entregue);
+  'interno' se é só alinhamento com o time (standup, weekly, sync técnico — falar inglês é só
+  para trabalhar com o time, não o entregável); 'nenhum' se idioma_modalidade for 'escrito'.
 - tipo_de_necessidade: 'producao_em_escala' se a empresa contrata para um PROBLEMA de produção
   em escala entregável como sistema (conteúdo em volume, automação de processo, pipeline de
   dados ou de IA — "produzir X em escala usando IA"); 'funcao_individual' se querem uma PESSOA
   para senioridade/execução (dev, designer, PM, analista), não uma máquina.`;
 }
 
-// Penalidades (SEM budget_ausente — removida na v2): texto + red flags do LLM.
-function penalidades(vaga, llm, perfil, pesos) {
+// Penalidades (SEM budget_ausente — removida na v2): texto + red flags do LLM + qualidade
+// do cliente (hire_rate / média paga — só quando a fonte traz o dado em cliente_meta;
+// nenhum adapter atual popula isso ainda, mas fica pronto para quando a Fase 2/Upwork trouxer).
+export function penalidades(vaga, llm, perfil, pesos) {
   const texto = `${vaga.titulo} ${vaga.descricao || ""}`.toLowerCase();
   const pen = pesos.penalidades || {};
   const p = {};
@@ -52,6 +67,13 @@ function penalidades(vaga, llm, perfil, pesos) {
     if (vaga.budget_usd < 2 * min && pen.urgente_com_budget_baixo) p.urgente_com_budget_baixo = pen.urgente_com_budget_baixo;
   }
   if (/\bnda\b/.test(texto.slice(0, 300)) && pen.nda_antes_da_descricao) p.nda_antes_da_descricao = pen.nda_antes_da_descricao;
+  const cm = vaga.cliente_meta || {};
+  if (typeof cm.hire_rate === "number" && cm.hire_rate < 0.3 && pen.cliente_hire_rate_baixo) {
+    p.cliente_hire_rate_baixo = pen.cliente_hire_rate_baixo;
+  }
+  if (typeof cm.media_paga_usd_h === "number" && cm.media_paga_usd_h < 12 && pen.cliente_paga_baixa) {
+    p.cliente_paga_baixa = pen.cliente_paga_baixa;
+  }
   for (const f of llm?.red_flags || []) if (pen[f] != null) p[f] = pen[f];
   return p;
 }
@@ -104,6 +126,7 @@ export async function qualificar(vagas, perfil, pesos, { maxAnalises = 40 } = {}
       score_detalhe.entrega_ingles = idi.entrega_ingles;
       score_detalhe.mercado = idi.mercado;
       score_detalhe.lead_ingles = idi.lead_ingles;
+      score_detalhe.fala_interna = idi.fala_interna;
       return { ...v, score, score_detalhe, llm_analise: r, status: "novo" };
     } catch (err) {
       warn(`LLM falhou em "${v.titulo?.slice(0, 40)}": ${err.message}`);

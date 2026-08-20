@@ -6,6 +6,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { todasVagas, atualizarScore } from "./lib/supabase.js";
 import { componentesDeterministicos, montarScore } from "./agents/05-scorer.js";
+import { penalidades as penalidadesDe } from "./agents/06-qualificador.js";
 import { log } from "./lib/log.js";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -13,19 +14,6 @@ const cfg = (n) => JSON.parse(readFileSync(join(RAIZ, "src/config", n), "utf8"))
 
 const VIABILIDADE = { alta: 1.0, media: 0.55, baixa: 0.15 };
 const STATUS_HUMANO = new Set(["interesse", "descartado", "aplicado", "resposta", "ganho", "perdido"]);
-
-function penalidadesDe(vaga, llm, perfil, pesos) {
-  const texto = `${vaga.titulo} ${vaga.descricao || ""}`.toLowerCase();
-  const pen = pesos.penalidades || {};
-  const p = {};
-  if (/\b(urgent|asap|immediately|urgente)\b/.test(texto) && vaga.budget_usd != null) {
-    const min = perfil.pricing.fixo_usd_min || 800;
-    if (vaga.budget_usd < 2 * min && pen.urgente_com_budget_baixo) p.urgente_com_budget_baixo = pen.urgente_com_budget_baixo;
-  }
-  if (/\bnda\b/.test(texto.slice(0, 300)) && pen.nda_antes_da_descricao) p.nda_antes_da_descricao = pen.nda_antes_da_descricao;
-  for (const f of llm?.red_flags || []) if (pen[f] != null) p[f] = pen[f];
-  return p;
-}
 
 export async function repontuar() {
   const perfil = cfg("perfil.json");

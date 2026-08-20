@@ -56,6 +56,8 @@ export function formatarVaga(v) {
   if (v.budget_usd == null) linhas.push("⚠️ budget não publicado — negociar escopo antes");
   // Entrega escrita em inglês (você produz com pipeline + revisor).
   if (v.score_detalhe?.entrega_ingles) linhas.push("🔤 entrega em inglês — pipeline + revisor");
+  // Alinhamento interno em inglês (standup/weekly/sync) — passa, não é atendimento ao cliente.
+  if (v.score_detalhe?.fala_interna) linhas.push("🗣️ reunião interna em inglês (com o time, não com o cliente)");
   // Vaga emprego cuja necessidade é produção em escala = lead de vendor.
   if (ehLead(v)) linhas.push("💡 lead: empresa com orçamento para este problema");
   linhas.push("", `🔗 ${esc(v.url)}`);

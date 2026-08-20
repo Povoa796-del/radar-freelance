@@ -10,6 +10,8 @@
     "teste_nao_pago": -25,
     "urgente_com_budget_baixo": -20,
     "nda_antes_da_descricao": -15,
-    "exige_fulltime": -30
+    "exige_fulltime": -30,
+    "cliente_hire_rate_baixo": -20,
+    "cliente_paga_baixa": -20
   }
 }

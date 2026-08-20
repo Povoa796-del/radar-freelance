@@ -13,6 +13,7 @@ import { avaliarGeo } from "../src/lib/geo.js";
 import { ehLead, temaDeServico, gerarPitch } from "../src/lead.js";
 import { decidirIdioma, lusoHispano } from "../src/lib/idioma.js";
 import { pareceNaoVaga } from "../src/lib/validacao.js";
+import { penalidades } from "../src/agents/06-qualificador.js";
 
 const geoAtivo = {
   aceita_presencial: true,
@@ -25,8 +26,8 @@ const geoAtivo = {
 
 const perfil = {
   pricing: { hora_usd_min: 45, fixo_usd_min: 800 },
-  anti_stacks: ["Unity", "Salesforce"],
-  fit_keywords: { automation: 1.0, llm: 1.0, node: 1.0, "next.js": 1.0 },
+  anti_stacks: ["Unity", "Salesforce", "n8n"],
+  fit_keywords: { automation: 1.0, llm: 1.0, node: 1.0, "next.js": 1.0, python: 0.8, rag: 1.0 },
 };
 const pesos = {
   fit_skill: 35, viabilidade_agentes: 25, ticket: 15, qualidade_cliente: 15,
@@ -82,6 +83,143 @@ function vagaBase(over = {}) {
     publicado_em: new Date().toISOString(), remoto: true, ...over,
   });
 }
+
+// --- Colaborador: stack complementar sai do descarte e passa a pontuar (item 1) ---
+
+test("gate: Python + RAG (stack do colaborador) passa — antes era anti-stack/baixo fit", () => {
+  const v = vagaBase({
+    titulo: "AI Automation Engineer (Python, RAG)",
+    descricao: "Build a RAG pipeline in Python with vector database and automation.",
+    skills: ["python", "rag"],
+  });
+  assert.equal(avaliarGate(v, perfil, gateCfg).ok, true);
+});
+
+test("gate: n8n continua anti-stack (nenhum dos dois cobre)", () => {
+  const v = vagaBase({
+    titulo: "Automation Engineer — n8n workflows",
+    descricao: "Build automation with n8n and LLM integration.",
+  });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.equal(r.ok, false);
+  assert.match(r.motivo, /anti-stack: n8n/i);
+});
+
+// --- Idioma: disponibilidade de horário não bloqueia; vídeo e fala-com-cliente sim (item 3) ---
+
+test("gate: overlap de fuso / frequência de reunião NÃO bloqueia mais", () => {
+  const v = vagaBase({ descricao: "Must overlap with PST for at least 8 hours daily. Automation and LLM work." });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.notEqual(r.motivo, "exige overlap de fuso grande");
+  assert.equal(r.ok, true);
+});
+
+test("gate: vídeo obrigatório na candidatura (Loom) é descartado", () => {
+  const v = vagaBase({ descricao: "Please record a Loom video introducing yourself as part of your application." });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.equal(r.ok, false);
+  assert.equal(r.motivo, "video_obrigatorio");
+});
+
+test("gate: núcleo falado com cliente (account manager / lead client calls) é descartado no anglófono", () => {
+  const v = vagaBase({
+    titulo: "Account Manager — Automation Platform",
+    descricao: "You will lead client calls for our automation platform and manage relationships with LLM-powered clients.",
+  });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.equal(r.ok, false);
+  assert.equal(r.motivo, "ingles_falado_cliente");
+});
+
+test("gate: a mesma frase em mercado luso-hispano NÃO é descartada por ingles_falado_cliente", () => {
+  const v = vagaBase({
+    titulo: "Account Manager — Automation Platform",
+    descricao: "Lead client calls for our Brazil automation office. Fluent Portuguese required.",
+    cliente_meta: { locations: [{ country_code: "BR" }] },
+  });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.notEqual(r.motivo, "ingles_falado_cliente");
+});
+
+test("idioma: reunião interna (standup/weekly) não rejeita — marca fala_interna", () => {
+  const v = vagaBase();
+  const llm = { idioma_modalidade: "falado", interlocutor_falado: "interno", tipo_de_necessidade: "producao_em_escala" };
+  const r = decidirIdioma(v, llm, 75);
+  assert.equal(r.rejeitar, false);
+  assert.equal(r.fala_interna, true);
+});
+
+test("idioma: falar inglês COM O CLIENTE rejeita mesmo com score alto", () => {
+  const v = vagaBase();
+  const llm = { idioma_modalidade: "falado", interlocutor_falado: "cliente", tipo_de_necessidade: "producao_em_escala" };
+  const r = decidirIdioma(v, llm, 90);
+  assert.equal(r.rejeitar, true);
+  assert.equal(r.motivo, "ingles_falado");
+  assert.equal(r.fala_interna, false);
+});
+
+// --- Filtros de qualidade (item 4) ---
+
+test("gate: preço fixo baixo + escopo desproporcional (proxy >3 entregas) é descartado", () => {
+  const desc = [
+    "We need the following deliverables:",
+    "1. Landing page design",
+    "2. Backend API",
+    "3. Database schema",
+    "4. Admin dashboard",
+    "5. Deployment and docs",
+  ].join("\n");
+  const v = vagaBase({ tipo: "freelance_fixo", budget_min: 150, budget_max: 150, descricao: desc });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.equal(r.ok, false);
+  assert.equal(r.motivo, "escopo_desproporcional");
+});
+
+test("gate: preço fixo baixo com poucas entregas NÃO é descartado por escopo", () => {
+  const v = vagaBase({ tipo: "freelance_fixo", budget_min: 150, budget_max: 150, descricao: "1. Fix the bug." });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.notEqual(r.motivo, "escopo_desproporcional");
+});
+
+test("gate: cliente com gasto total abaixo de $500 é descartado", () => {
+  const v = vagaBase({ cliente_meta: { total_gasto_usd: 200 } });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.equal(r.ok, false);
+  assert.equal(r.motivo, "cliente_sem_historico");
+});
+
+test("gate: cliente com zero avaliações é descartado; ausência de dado NÃO penaliza", () => {
+  assert.equal(avaliarGate(vagaBase({ cliente_meta: { avaliacoes: 0 } }), perfil, gateCfg).motivo, "cliente_sem_historico");
+  assert.equal(avaliarGate(vagaBase(), perfil, gateCfg).ok, true);
+});
+
+test("gate: indicador de posição já preenchida (Hires: 1) é descartado", () => {
+  const v = vagaBase({ descricao: "Great opportunity, apply now. Hires: 1." });
+  const r = avaliarGate(v, perfil, gateCfg);
+  assert.equal(r.ok, false);
+  assert.equal(r.motivo, "posicao_preenchida");
+});
+
+test("gate: equipe exigida explicitamente é descartada", () => {
+  assert.equal(avaliarGate(vagaBase({ titulo: "Automation Dev (Team)" }), perfil, gateCfg).motivo, "exige_equipe");
+  assert.equal(
+    avaliarGate(vagaBase({ descricao: "This role is team required, not for solo freelancers." }), perfil, gateCfg).motivo,
+    "exige_equipe"
+  );
+});
+
+test("qualificador: cliente hire_rate<30% ou paga<$12/h penaliza, não descarta; sem dado não penaliza", () => {
+  const pesosComPen = { ...pesos, penalidades: { cliente_hire_rate_baixo: -20, cliente_paga_baixa: -20 } };
+  const p1 = penalidades(vagaBase({ cliente_meta: { hire_rate: 0.2 } }), {}, perfil, pesosComPen);
+  assert.equal(p1.cliente_hire_rate_baixo, -20);
+
+  const p2 = penalidades(vagaBase({ cliente_meta: { media_paga_usd_h: 8 } }), {}, perfil, pesosComPen);
+  assert.equal(p2.cliente_paga_baixa, -20);
+
+  const p3 = penalidades(vagaBase(), {}, perfil, pesosComPen);
+  assert.equal(p3.cliente_hire_rate_baixo, undefined);
+  assert.equal(p3.cliente_paga_baixa, undefined);
+});
 
 test("gate: aprova vaga no nicho, rejeita presencial e ticket baixo", () => {
   assert.equal(avaliarGate(vagaBase(), perfil, gateCfg).ok, true);
